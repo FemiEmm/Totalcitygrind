@@ -130,7 +130,11 @@ export function createTiledDistrictBlocks({
   return blocks;
 }
 
-// Increase the current camera magnification by 50% in both worlds.
-const CAMERA_ZOOM = 1.5;
-export const CAMERA_WIDTH = 1024 / CAMERA_ZOOM;
-export const CAMERA_HEIGHT = 576 / CAMERA_ZOOM;
+// Desktop keeps the original field of view; only touch devices zoom in.
+export const CAMERA_WIDTH = 1024;
+export const CAMERA_HEIGHT = 576;
+
+export function getCameraDimensions(touchDevice = false) {
+  const zoom = touchDevice ? 1.5 : 1;
+  return { width: CAMERA_WIDTH / zoom, height: CAMERA_HEIGHT / zoom };
+}

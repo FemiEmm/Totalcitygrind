@@ -18,8 +18,8 @@ import grassTileUrl from "../../assets/ground/grass-tile.png";
 import trafficLightConcreteUrl from "../../assets/ground/traffic-light-concrete.png";
 import parkingBayTileUrl from "../../assets/roads/parking-bay-tile.png";
 import {
-  CAMERA_HEIGHT,
-  CAMERA_WIDTH,
+  getCameraDimensions,
+
   GROUND_COLOUR,
   GRID_COLUMNS,
   GRID_ROWS,
@@ -80,6 +80,7 @@ import {
 } from "../../player/systems/playerVehicle";
 import VehicleHud from "../../hud/components/VehicleHud.vue";
 import PlayerStatusHud from "../../hud/components/PlayerStatusHud.vue";
+import RouteHud from "../../danfo/components/RouteHud.vue";
 import RouteNavigationHud from "../../hud/components/RouteNavigationHud.vue";
 import PassengerOccupancyHud from "../../hud/components/PassengerOccupancyHud.vue";
 import { hudPreferences } from "../../hud/hudPreferences.js";
@@ -442,6 +443,10 @@ const MAINLAND_MAP_DATA = {
   mapTravelZones: [...mapTravelZones],
   playerStart: { ...playerStart },
 };
+
+const cameraDimensions = getCameraDimensions(window.matchMedia("(pointer: coarse)").matches);
+let CAMERA_WIDTH = cameraDimensions.width;
+let CAMERA_HEIGHT = cameraDimensions.height;
 
 const camera = reactive({
   x: Math.max(
@@ -3972,8 +3977,17 @@ function resizeCanvas() {
     return;
   }
 
-  const bounds =
-    canvas.getBoundingClientRect();
+  const dimensions = getCameraDimensions(window.matchMedia("(pointer: coarse)").matches);
+  if (CAMERA_WIDTH !== dimensions.width || CAMERA_HEIGHT !== dimensions.height) {
+    CAMERA_WIDTH = dimensions.width;
+    CAMERA_HEIGHT = dimensions.height;
+    camera.x = clamp(player.x - CAMERA_WIDTH / 2, WORLD_MIN_X, WORLD_MAX_X - CAMERA_WIDTH);
+    camera.y = clamp(player.y - CAMERA_HEIGHT / 2, WORLD_MIN_Y, WORLD_MAX_Y - CAMERA_HEIGHT);
+    camera.previousX = camera.x;
+    camera.previousY = camera.y;
+  }
+
+  const bounds = canvas.getBoundingClientRect();
 
   const pixelRatio = Math.min(
     window.devicePixelRatio || 1,
@@ -7005,6 +7019,18 @@ onBeforeUnmount(() => {
       :vehicle-type="employmentState.selectedJob"
     />
     </div>
+
+    <RouteHud
+      class="route-hud--desktop"
+      v-if="hudPreferences.routeGuide && employmentState.selectedJob && routeState.status === 'active'"
+      :route="activeRoute"
+      :current-stop="activeRouteStop"
+      :following-stop="followingRouteStop"
+      :current-stop-index="routeState.currentStopIndex"
+      :hold-progress="stopHoldProgress"
+      :inside-stop="isInsideActiveStop"
+      :speed-allowed="isStopSpeedAllowed"
+    />
 
     <EnergyDepletedModal
       v-if="energyDepleted"

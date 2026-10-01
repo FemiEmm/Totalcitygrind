@@ -1,17 +1,17 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { isPlayerVehicleEngineStarted } from "../../audio/vehicleAudio.js";
-const props = defineProps({ transmission: { type: String, default: "automatic" } });
+const props = defineProps({ transmission: { type: String, default: "automatic" }, steeringOnly: { type: Boolean, default: false } });
 const engineOn = computed(isPlayerVehicleEngineStarted);
 const emit = defineEmits(["input"]);
 const held = ref(new Map());
 const groups = [
-  { id: "steering", controls: [{ key: "a", label: "Left", text: "◀" }, { key: "d", label: "Right", text: "▶" }] },
+  { id: "steering", controls: [{ key: "a", label: "Steer left", icon: "fa-circle-arrow-left" }, { key: "d", label: "Steer right", icon: "fa-circle-arrow-right" }] },
   { id: "gears", controls: [{ key: "e", label: "Gear up", text: "GEAR +" }, { key: "q", label: "Gear down", text: "GEAR −" }] },
   { id: "utility", controls: [{ key: "i", label: "Start or stop engine", text: "START", icon: "fa-key" }, { key: "h", label: "Horn", text: "HORN" }] },
   { id: "pedals", controls: [{ key: "s", label: "Brake or reverse", text: "BRAKE / R" }, { key: "w", label: "Throttle — accelerate", text: "THROTTLE" }] },
 ];
-const visibleGroups = computed(() => groups.filter(group => group.id !== "gears" || props.transmission === "manual"));
+const visibleGroups = computed(() => groups.filter(group => props.steeringOnly ? group.id === "steering" : group.id !== "gears" || props.transmission === "manual"));
 function press(event, key) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   event.currentTarget.setPointerCapture(event.pointerId);
@@ -38,14 +38,14 @@ onBeforeUnmount(() => {
 });
 </script>
 <template>
-  <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual' }" aria-label="Driving controls">
+  <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual', 'touch-controls--steering-only': props.steeringOnly }" aria-label="Driving controls">
     <div v-for="group in visibleGroups" :key="group.id" class="touch-controls__group" :class="`touch-controls__${group.id}`">
       <button v-for="control in group.controls" :key="control.key" type="button" :aria-label="control.key === 'i' ? (engineOn ? 'Stop engine' : 'Start engine') : control.label"
         :class="{ held: [...held.values()].includes(control.key), accelerator: control.key === 'w' }"
         @pointerdown.prevent="press($event, control.key)" @pointerup="release" @pointercancel="release"
         @lostpointercapture="release" @contextmenu.prevent>
         <i v-if="control.icon" class="fa-solid" :class="control.icon" aria-hidden="true" />
-        <span>{{ control.key === "i" ? (engineOn ? "STOP" : "START") : control.text }}</span>
+        <span v-if="control.text">{{ control.key === "i" ? (engineOn ? "STOP" : "START") : control.text }}</span>
       </button>
     </div>
   </nav>
@@ -53,6 +53,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .touch-controls { position:absolute; z-index:1100; inset:auto max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); display:grid; grid-template-columns:auto auto 1fr auto; align-items:end; gap:10px; pointer-events:none; }
 .touch-controls--automatic { grid-template-columns:auto 1fr auto; }
+.touch-controls--steering-only { left:50%; right:auto; width:max-content; transform:translateX(-50%); grid-template-columns:auto; }
+.touch-controls__steering button { display:grid; place-items:center; }
+.touch-controls__steering i { font-size:32px; line-height:1; pointer-events:none; }
 .touch-controls__group { display:flex; gap:8px; }
 button { width:64px; height:64px; border:2px solid #fff7dc80; border-radius:18px; color:#fff7dc; background:#17213ae8; font-size:13px; font-weight:bold; touch-action:none; user-select:none; -webkit-user-select:none; pointer-events:auto; }
 button.accelerator { background:#ffd43b; color:#17213a; }

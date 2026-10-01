@@ -1,4 +1,5 @@
 export {
+  getCameraDimensions,
   CAMERA_HEIGHT,
   CAMERA_WIDTH,
   DISTRICT_HEIGHT,

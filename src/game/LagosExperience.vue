@@ -325,7 +325,7 @@ onBeforeUnmount(() => {
     />
 
     <div v-if="worldLoading" class="game__loading" role="status">Loading the city…</div>
-    <TouchControls v-if="touchDevice && !worldPaused" :key="`${activeWorld}:${activeWorldReference?.transmission}`" :transmission="activeWorldReference?.transmission" @input="handleTouchInput" />
+    <TouchControls v-if="!worldPaused" :steering-only="!touchDevice" :key="`${activeWorld}:${activeWorldReference?.transmission}`" :transmission="activeWorldReference?.transmission" @input="handleTouchInput" />
     <section v-if="portrait" class="game__rotate" role="status" aria-live="polite">
       <i class="fa-solid fa-mobile-screen-button" aria-hidden="true" />
       <h1>Turn your phone sideways</h1>

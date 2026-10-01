@@ -1,3 +1,9 @@
+.driving-hud-row { display:contents; }
+/* Landscape phone layout. Keep the road clear and controls within thumb reach. */
+html, body, #app { height:100%; height:100dvh; overscroll-behavior:none; }
+button { touch-action:manipulation; }
+.world-map__canvas { touch-action:none; }
+@media (pointer:coarse) and (orientation:landscape) {
 /* Keep speed and the next destination together without covering the road. */
 .driving-hud-row { position:absolute; z-index:5000; top:max(8px, env(safe-area-inset-top)); left:50%; transform:translateX(-50%); display:flex; align-items:flex-start; gap:8px; width:max-content; max-width:calc(100% - 32px); pointer-events:none; }
 .driving-hud-row > .vehicle-hud, .driving-hud-row > .route-navigation { position:static !important; inset:auto !important; transform:none !important; }
@@ -5,11 +11,7 @@
 .driving-hud-row > .route-navigation { width:180px !important; min-width:0; flex:0 1 180px; }
 .driving-hud-row .route-navigation__heading, .driving-hud-row .route-navigation__tape { display:none !important; }
 .driving-hud-row .route-navigation__destination { box-sizing:border-box; width:100% !important; margin:0 !important; grid-template-columns:18px minmax(0,1fr) auto !important; gap:5px; min-height:50px; }
-/* Landscape phone layout. Keep the road clear and controls within thumb reach. */
-html, body, #app { height:100%; height:100dvh; overscroll-behavior:none; }
-button { touch-action:manipulation; }
-.world-map__canvas { touch-action:none; }
-@media (pointer:coarse) and (orientation:landscape), (max-height:500px) and (orientation:landscape) {
+  .route-hud--desktop { display:none !important; }
   .game-menu { padding:12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)) !important; display:flex !important; justify-content:flex-end; align-items:center; }
   .game-menu .game-menu__card, .game-menu:not(.game-menu--paused) .game-menu__card { width:min(560px, 66vw) !important; height:calc(100dvh - 28px) !important; max-height:calc(100dvh - 28px) !important; min-height:0 !important; margin:0 !important; grid-template-columns:1fr !important; }
   .game-menu .game-menu__navigation, .game-menu:not(.game-menu--paused) .game-menu__navigation { padding:14px 18px !important; }
@@ -53,7 +55,7 @@ button { touch-action:manipulation; }
 }
 
 /* Short landscape screens: one phone scroll area, fixed reachable navigation. */
-@media (pointer:coarse) and (orientation:landscape), (max-height:500px) and (orientation:landscape) {
+@media (pointer:coarse) and (orientation:landscape) {
   :root { --mobile-modal-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   .game-menu:not(.game-menu--paused) { background-size:contain !important; background-position:center !important; background-color:#17213a !important; }
   .game-menu:not(.game-menu--paused) .game-menu__card { width:min(460px,56vw) !important; }
