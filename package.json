@@ -1,0 +1,72 @@
+{
+  "name": "total-city-grind",
+  "productName": "Total City Grind",
+  "private": true,
+  "version": "0.1.5",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "desktop:start": "npm run build && electron .",
+    "desktop:build": "npm run build && node scripts/build-desktop.mjs",
+    "validate:collision": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateCollision.mjs",
+    "validate:traffic": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateTraffic.mjs",
+    "validate:vehicle-routes": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateVehicleRoutes.mjs",
+    "validate:map": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateMap.mjs",
+    "preview": "vite preview",
+    "validate:world2": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateWorld2Regression.mjs",
+    "validate:mobile": "node scripts/validateMobile.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.39",
+    "@fortawesome/fontawesome-free": "6.7.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.7",
+    "electron": "^40.0.0",
+    "electron-builder": "^26.0.0",
+    "vite": "^8.1.1"
+  },
+  "build": {
+    "appId": "com.lagosexperience.game",
+    "productName": "Total City Grind",
+    "asar": true,
+    "directories": {
+      "output": "desktop-release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Total-City-Grind-Setup-${version}.${ext}",
+      "icon": "src/assets/game/tcg-logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Total City Grind",
+      "uninstallDisplayName": "Total City Grind",
+      "deleteAppDataOnUninstall": false
+    },
+    "extraResources": [
+      {
+        "from": "src/assets/game/tcg-logo.ico",
+        "to": "tcg-logo.ico"
+      }
+    ]
+  }
+}

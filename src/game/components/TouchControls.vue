@@ -1,0 +1,66 @@
+<script setup>
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { isPlayerVehicleEngineStarted } from "../../audio/vehicleAudio.js";
+const props = defineProps({ transmission: { type: String, default: "automatic" } });
+const engineOn = computed(isPlayerVehicleEngineStarted);
+const emit = defineEmits(["input"]);
+const held = ref(new Map());
+const groups = [
+  { id: "steering", controls: [{ key: "a", label: "Left", text: "◀" }, { key: "d", label: "Right", text: "▶" }] },
+  { id: "gears", controls: [{ key: "e", label: "Gear up", text: "GEAR +" }, { key: "q", label: "Gear down", text: "GEAR −" }] },
+  { id: "utility", controls: [{ key: "i", label: "Start or stop engine", text: "START", icon: "fa-key" }, { key: "h", label: "Horn", text: "HORN" }] },
+  { id: "pedals", controls: [{ key: "s", label: "Brake or reverse", text: "BRAKE / R" }, { key: "w", label: "Throttle — accelerate", text: "THROTTLE" }] },
+];
+const visibleGroups = computed(() => groups.filter(group => group.id !== "gears" || props.transmission === "manual"));
+function press(event, key) {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  event.currentTarget.setPointerCapture(event.pointerId);
+  if (![...held.value.values()].includes(key)) emit("input", { key, down: true });
+  held.value.set(event.pointerId, key);
+}
+function release(event) {
+  const key = held.value.get(event.pointerId);
+  held.value.delete(event.pointerId);
+  if (key && ![...held.value.values()].includes(key)) emit("input", { key, down: false });
+}
+function releaseAll() {
+  for (const key of new Set(held.value.values())) emit("input", { key, down: false });
+  held.value.clear();
+}
+onMounted(() => {
+  window.addEventListener("blur", releaseAll);
+  document.addEventListener("visibilitychange", releaseAll);
+});
+onBeforeUnmount(() => {
+  releaseAll();
+  window.removeEventListener("blur", releaseAll);
+  document.removeEventListener("visibilitychange", releaseAll);
+});
+</script>
+<template>
+  <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual' }" aria-label="Driving controls">
+    <div v-for="group in visibleGroups" :key="group.id" class="touch-controls__group" :class="`touch-controls__${group.id}`">
+      <button v-for="control in group.controls" :key="control.key" type="button" :aria-label="control.key === 'i' ? (engineOn ? 'Stop engine' : 'Start engine') : control.label"
+        :class="{ held: [...held.values()].includes(control.key), accelerator: control.key === 'w' }"
+        @pointerdown.prevent="press($event, control.key)" @pointerup="release" @pointercancel="release"
+        @lostpointercapture="release" @contextmenu.prevent>
+        <i v-if="control.icon" class="fa-solid" :class="control.icon" aria-hidden="true" />
+        <span>{{ control.key === "i" ? (engineOn ? "STOP" : "START") : control.text }}</span>
+      </button>
+    </div>
+  </nav>
+</template>
+<style scoped>
+.touch-controls { position:absolute; z-index:1100; inset:auto max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); display:grid; grid-template-columns:auto auto 1fr auto; align-items:end; gap:10px; pointer-events:none; }
+.touch-controls--automatic { grid-template-columns:auto 1fr auto; }
+.touch-controls__group { display:flex; gap:8px; }
+button { width:64px; height:64px; border:2px solid #fff7dc80; border-radius:18px; color:#fff7dc; background:#17213ae8; font-size:13px; font-weight:bold; touch-action:none; user-select:none; -webkit-user-select:none; pointer-events:auto; }
+button.accelerator { background:#ffd43b; color:#17213a; }
+button.held { background:#65d6ee; color:#17213a; transform:translateY(2px); }
+.touch-controls__gears { flex-direction:column; }
+.touch-controls__utility { justify-self:end; }
+.touch-controls__utility button, .touch-controls__gears button { width:52px; height:44px; border-radius:12px; font-size:10px; }
+.touch-controls__utility button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+.touch-controls__utility i { font-size:14px; }
+@media (max-width:700px) { button { width:54px; height:58px; } .touch-controls { gap:8px; } .touch-controls__utility, .touch-controls__gears { gap:5px; } .touch-controls__utility button, .touch-controls__gears button { height:44px; width:48px; } }
+</style>
