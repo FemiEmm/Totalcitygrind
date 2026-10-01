@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch, nextTick } from "vue";
+import { fullscreenActive, installed, displayNotice, installHelp, installing, appleDevice, toggleFullscreen, addToHomeScreen } from "../browserDisplay.js";
 import ToggleIcon from "../../ui/components/ToggleIcon.vue";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import menuBackgroundUrl from "../../assets/game/TCG_image.jpg";
@@ -47,6 +48,11 @@ const emit = defineEmits([
 ]);
 
 const activePanel = ref("menu");
+const displayFeedback = ref(null);
+watch([displayNotice, installHelp], async () => {
+  await nextTick();
+  if (displayNotice.value || installHelp.value) displayFeedback.value?.scrollIntoView({ block: "nearest" });
+});
 const pendingOverwriteSlot = ref(null);
 const pendingDeleteSlot = ref(null);
 const initialAudio = getPlayerVehicleAudioSettings();
@@ -173,17 +179,6 @@ function chooseRenderQuality(quality) {
   playGameSound("confirm");
 }
 
-async function toggleFullscreen() {
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen();
-    } else {
-      await document.documentElement.requestFullscreen();
-    }
-  } catch {
-    playGameSound("error");
-  }
-}
 </script>
 
 <template>
@@ -270,6 +265,17 @@ async function toggleFullscreen() {
           >
             <i class="fa-solid fa-house" aria-hidden="true" />
             <span><strong>MAIN MENU</strong><small>Return to the title screen</small></span>
+            <i class="fa-solid fa-chevron-right" aria-hidden="true" />
+          </button>
+
+          <button v-if="!isPaused" class="game-menu__action" type="button" @click="toggleFullscreen">
+            <i class="fa-solid" :class="fullscreenActive ? 'fa-compress' : 'fa-expand'" aria-hidden="true" />
+            <span><strong>{{ fullscreenActive ? "EXIT FULLSCREEN" : "FULLSCREEN" }}</strong><small>Use the whole display</small></span>
+            <i class="fa-solid fa-chevron-right" aria-hidden="true" />
+          </button>
+          <button v-if="!isPaused" class="game-menu__action" type="button" :disabled="installing" @click="addToHomeScreen">
+            <i class="fa-solid fa-mobile-screen-button" aria-hidden="true" />
+            <span><strong>{{ installed ? "APP INSTALLED" : "ADD TO HOME SCREEN" }}</strong><small>Launch from your app icon</small></span>
             <i class="fa-solid fa-chevron-right" aria-hidden="true" />
           </button>
         </nav>
@@ -421,7 +427,9 @@ async function toggleFullscreen() {
             </span>
             <i class="fa-solid fa-chevron-right" aria-hidden="true" />
           </button>
-        </section>
+  
+
+      </section>
 
         <section v-else class="game-menu__settings game-menu__slots">
           <button
@@ -473,6 +481,20 @@ async function toggleFullscreen() {
             </div>
           </div>
         </section>
+        <div ref="displayFeedback">
+        <div v-if="displayNotice" class="game-menu__display-notice" role="status">{{ displayNotice }}</div>
+        <section v-if="installHelp && !isPaused" class="game-menu__install-help" aria-label="Add to Home Screen instructions">
+          <strong>ADD TO HOME SCREEN</strong>
+          <ol v-if="appleDevice">
+            <li>Open this game in Safari and tap Share (the square with an upward arrow).</li>
+            <li>Choose Add to Home Screen. You may need to scroll or tap More.</li>
+            <li>Keep Open as Web App enabled if shown, then tap Add.</li>
+            <li>Launch Total City Grind from its new icon and turn your device sideways.</li>
+          </ol>
+          <p v-else>Open your browser menu and choose Install app or Add to Home Screen. If neither appears, try a browser that supports web app installation.</p>
+          <button type="button" class="game-menu__setting-button" @click="installHelp = false">Got it</button>
+        </section>
+        </div>
       </section>
     </main>
 
@@ -484,6 +506,10 @@ async function toggleFullscreen() {
 </template>
 
 <style scoped>
+.game-menu__display-notice, .game-menu__install-help { padding:12px; margin:12px 0; border:2px solid #17213a; border-radius:12px; background:#fff7dc; color:#17213a; font-size:14px; line-height:1.4; }
+.game-menu__install-help ol { padding-left:20px; }
+.game-menu__install-help li + li { margin-top:6px; }
+.game-menu__action span { min-width:0; overflow-wrap:anywhere; }
 .game-menu__heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .game-menu__heading > div { min-width:0; }
 .game-menu__heading p { margin:6px 0 0; font-size:13px; line-height:1.4; }

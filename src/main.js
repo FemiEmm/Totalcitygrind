@@ -1,3 +1,4 @@
+import "./game/browserDisplay.js";
 import { createApp } from "vue";
 import App from "./App.vue";
 import { installGameUiSounds } from "./audio/gameAudio.js";
