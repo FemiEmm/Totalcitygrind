@@ -66,4 +66,15 @@ button.held { background:#65d6ee; color:#17213a; transform:translateY(2px); }
 .touch-controls__utility button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
 .touch-controls__utility i { font-size:14px; }
 @media (max-width:700px) { button { width:54px; height:58px; } .touch-controls { gap:8px; } .touch-controls__utility, .touch-controls__gears { gap:5px; } .touch-controls__utility button, .touch-controls__gears button { height:44px; width:48px; } }
+/* Enlarge touch hit areas without changing desktop controls or scaling the grid. */
+@media (pointer: coarse) {
+  button { width:80px; height:80px; border-radius:22.5px; }
+  .touch-controls__steering i { font-size:40px; }
+  .touch-controls__utility button, .touch-controls__gears button { width:65px; height:55px; border-radius:15px; font-size:12.5px; }
+  .touch-controls__utility i { font-size:17.5px; }
+}
+@media (pointer: coarse) and (max-width:700px) {
+  button { width:67.5px; height:72.5px; }
+  .touch-controls__utility button, .touch-controls__gears button { width:60px; height:55px; }
+}
 </style>
