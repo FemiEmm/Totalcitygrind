@@ -1,7 +1,6 @@
 import {requestIdentity} from './economy/requests.js';
 import {account,settle,minuteOf,dayOf,walletView,protectSnapshot,progress,audit} from './economy/authority.js';
 import {economyAction,observeEconomyLocation} from './economy/actions.js';
-import { passengerRequest } from './passengers/api.js';
 import { heistRequest } from './heist/api.js';
 import { housingRequest } from './housing/api.js';
 import { updateWorldWaste } from './careers/wasteWorld.js';
@@ -23,7 +22,7 @@ function dispatchGameState(input) {
   const { action, playerId } = input;
   if (typeof playerId !== 'string' || !read('profiles',playerId)) throw new ApiError(404, 'Player not found');
   if (action === 'economy') return transaction(db=>economyAction(db,input));
-  if (action === 'passengers') return passengerRequest(input);
+  if (action === 'passengers') throw new ApiError(410, 'Refresh the game to use local passenger boarding.');
   if (action === 'heist') return heistRequest(input);
   if (action === 'housing') return housingRequest(input);
   if (action === 'club') return clubRequest(input);

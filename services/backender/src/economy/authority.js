@@ -78,20 +78,6 @@ export function settle(db){
   consume(w,'heist',db.heists?.accounts[id]?.receipts);
   consume(w,'club',db.club?.accounts[id]?.receipts,r=>({amount:-r.price,label:'CLUB DRINK',savings:0}));
   consume(w,'government',db.government?.accounts[id]?.receipts);
-  for(const e of db.passengers?.sessions[id]?.events||[]){if(e.sequence<=w.applied.passengers)continue;
-   const route=catalogue.routes.find(r=>r.id===e.routeId),r=e.result;
-   if(route){
-    w.workDays[day]=route.job;
-    if(r.boardedCount){progress(w,'passenger-boarded',r.boardedCount);progress(w,route.job+'-passenger-boarded',r.boardedCount);}
-    if(e.type==='route-complete'){progress(w,'route-completed');progress(w,route.job+'-route-completed');if(minuteOf(w)%1440>=1080)progress(w,'night-route-completed');}
-   }
-   if(r.fareEarned)cash(w,r.fareEarned,'PASSENGER FARES');
-   if(r.chargeAgbero&&route.job==='danfo'){const first=w.agberoDay!==day;cash(w,first?-1000:-300,first?'AGBERO TICKET':'AGBERO LOADING',false);w.agberoDay=day;state.economyState.lastAgberoTicketDay=day;r.agberoPayment={amount:first?1000:300,reason:first?'owo ticket':'owo loading'};}
-   if(e.type==='route-complete'&&route.job==='brt'){
-    let distance=0;for(let i=1;i<route.stopIds.length;i++){const a=catalogue.stops.find(s=>s.id===route.stopIds[i-1]),b=catalogue.stops.find(s=>s.id===route.stopIds[i]);distance+=Math.hypot(a.x-b.x,a.y-b.y)/120;}
-    cash(w,Math.min(65000,Math.max(20000,Math.round((9000+distance*575+Math.max(0,route.stopIds.length-2)*175)/100)*100)),'BRT ROUTE SALARY');
-   }w.applied.passengers=e.sequence;
-  }
   const before=state.bankSavingsState.balance;processBankSavingsDay(state.bankSavingsState,day);if(state.bankSavingsState.balance>before)audit(w,state.bankSavingsState.balance-before,'SAVINGS INTEREST');
   const business=processBusinessDay({state:state.businessState,currentDay:day});if(business?.profit){cash(w,business.profit,'BUSINESS PROFIT');progress(w,'business-profit-earned',business.profit);}
   sampleMarketDeposits(state.stockMarketState,day,minuteOf(w)%1440,state.bankSavingsState.balance);

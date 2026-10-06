@@ -5271,7 +5271,7 @@ function handleRouteSelection(routeId) {
     startDanfoPassengerRoute({
       passengerState,
       route,
-      config: activePassengerConfig.value, sharedPopulation: true,
+      config: activePassengerConfig.value,
     });
   }
 }
@@ -6952,7 +6952,17 @@ async function onlineMoney(op,payload={},after){
 }
 watch(()=>connection.wallet,applyOnlineWallet,{flush:'post'});
 
-const passengerPopulation=usePassengerPopulation({player,route:routeState,passengers:passengerState,minute:()=>getAbsoluteGameMinute(gameClock)});
+const passengerPopulation=usePassengerPopulation({player,route:routeState,passengers:passengerState,
+ async onStop(event){
+  if(!getSaveAccount())return;
+  try{
+   const result=await gameRequest('economy',{op:'transport-stop',routeId:event.route.id,tripId:event.tripId,stopIndex:event.stopIndex});
+   applyOnlineWallet();
+   if(result.agberoPayment)agberoPayment.value={...result.agberoPayment,id:++agberoPaymentSequence};
+   saveGame();
+  }catch(e){showPlayerWarning('bank','ROUTE PAYMENT',e.message);}
+ }
+});
 const heist=useHeist({
  player,crime:crimeState,ready:()=>!!propertyState.starterHomeId,minute:()=>getAbsoluteGameMinute(gameClock),money:()=>economyState.money,home:()=>activeHomeParkingZone.value,
  blocked:()=>props.paused||crimeState.status!=='free'||sleepState.overlayVisible||worldTransition.active||!!careers.state.shift||!!careers.state.lesson||economyState.gameOver,

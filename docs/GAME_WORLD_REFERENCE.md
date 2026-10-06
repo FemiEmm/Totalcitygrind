@@ -243,18 +243,15 @@ Coastal totals: 17 Danfo stops, eight BRT stops. Nine Danfo routes (CC-D1–CC-D
 | Mr-Wire bank heist | `src/heist/rules.js`, `src/heist/useHeist.js` |
 | Coast City layout and routes | `src/world2/data/worldMap2.js`, `src/world2/data/transitRoutes.js` |
 
-## Shared NPC passengers
+## Local passengers
 
-Implemented 2026-10-04; source reviewed only, not runtime tested.
+Updated 2026-10-06; source changes only, not runtime tested.
 
-- Mainland Danfo and BRT share exactly 1,000 NPCs across the 30 physical stops; initial allocation is 33 or 34 each. Coast City is excluded while locked.
-- Waiting, onboard and resting NPCs are all part of the same total. No new NPCs are created when selecting a route.
-- Each NPC has a destination. Only passengers for later stops on the chosen route can board, subject to 14 Danfo or 48 BRT seats.
-- Boarding is one passenger per three-second step after the initial stop dwell. Leaving ends boarding. Agbero is charged once per stop visit that actually boards passengers.
-- Drop-offs remain at that stop but rest for two game hours before seeking another trip. Fares are paid on arrival using the existing Danfo fare formula. BRT route salary is unchanged.
-- Each game hour, each stop with fewer than 10 waiting passengers may receive one waiting NPC from a stop above its original allocation. No donor means no transfer. Redistribution never touches onboard NPCs.
-- Online uses one shared server clock (one real second = one game minute); offline uses the saved game clock. Hourly work is evaluated lazily on a request, with bounded catch-up, rather than per rendered frame.
-- Online counts and boarding transactions live in Backender. Offline pool data is saved with the game. Route cancellation returns riders to the last served stop without fares; abandoned online journeys are released after one game day. Account deletion returns riders too.
-- Stop feedback includes the remaining waiting count.
+- Shared population limits and hourly redistribution are disabled. Each selected route generates local passengers independently.
+- Danfo stops offer 2–8 passengers; BRT stops offer 5–16. Vehicle capacities remain 14 and 48 respectively.
+- Boarding happens in a single batch after a 1.25-second stop, then navigation advances immediately. Boarding never waits for a network reply.
+- Online fare amounts, Agbero charges and BRT salary are calculated separately by the backend. Payment receipts prevent repeat payments; no global NPC counts are updated.
+- Old shared-population saves restart their active route at the first stop when loaded. New local passenger saves retain their route progress.
+- Coast City remains locked.
 
-Sources: `src/danfo/population/rules.js`, `src/danfo/population/usePassengerPopulation.js`, `src/danfo/population/catalogue.json`; backend copies in `../backender/src/passengers/`. Keep both catalogues/rules synchronized when routes or stop coordinates change.
+Sources: `src/danfo/population/usePassengerPopulation.js`, `src/danfo/systems/danfoPassengers.js`, `services/backender/src/economy/transport.js`. Legacy population rules are inactive.
