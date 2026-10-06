@@ -1,3 +1,4 @@
+import {isDeepStrictEqual} from 'node:util';
 import {mapTables,arrayTables,recordTables} from './layout.js';
 const get=(object,path)=>path.split('.').reduce((value,key)=>value?.[key],object);
 function put(object,path,value){const keys=path.split('.');let cursor=object;for(const key of keys.slice(0,-1))cursor=cursor[key] ||= {};cursor[keys.at(-1)]=value;}
@@ -26,8 +27,8 @@ export async function loadRecords(client){
  // One read round trip; historical ledger and expired retry payloads are not hydrated.
  const query=recordTables.map(table=>"select '"+table+"' as table_name,record_key,payload from tcg_private."+table+(table==='processed_requests'?" where updated_at > now() - interval '15 minutes'":'')).join(' union all ');
  for(const row of (await client.query(query)).rows)rows.get(row.table_name).set(row.record_key,row.payload);
- // Capture before attaching component objects to domain records.
- const before=new Map([...rows].map(([table,values])=>[table,new Map([...values].map(([key,value])=>[key,JSON.stringify(value)]))]));
+ // Capture detached data before hydration. JSONB object key order is not significant.
+ const before=new Map([...rows].map(([table,values])=>[table,new Map([...values].map(([key,value])=>[key,structuredClone(value)]))]));
  const state={version:1,users:{},profiles:{},sessions:{},...Object.fromEntries(rows.get('shared_state'))};
  for(const [name,path] of mapTables){const values=rows.get(name);if(values.size||!path.includes('.'))put(state,path,Object.fromEntries(values));else if(get(state,path.split('.')[0]))put(state,path,{});}
  for(const [name,path] of arrayTables){const values=rows.get(name);if(values.size||get(state,path.split('.')[0]))put(state,path,[...values].sort((a,b)=>Number(a[0])-Number(b[0])).map(([,value])=>value));}
@@ -40,8 +41,10 @@ export async function persistRecords(client,state,before){
  const {rows,ledger}=encodeRecords(state),writes=[],writeParameters=[];
  for(const table of recordTables){
   const values=rows.get(table),previous=before.get(table),updates=[];
-  for(const [key,payload] of values)if(previous.get(key)!==JSON.stringify(payload)){
-   if(table==='processed_requests'&&previous.has(key))throw Error('Committed request receipt changed');
+  for(const [key,payload] of values)if(!previous.has(key)||!isDeepStrictEqual(previous.get(key),payload)){
+   if(table==='processed_requests'&&previous.has(key)){
+    const error=new Error('Committed request receipt changed');error.code='IMMUTABLE_RECEIPT_CHANGED';throw error;
+   }
    updates.push({record_key:key,payload});
   }
   if(updates.length){
