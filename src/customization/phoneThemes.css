@@ -1,0 +1,38 @@
+/* Model silhouettes share the same responsive content and controls. */
+.game-phone__device.phone-skin {
+  background:var(--phone-frame) !important;
+  border-radius:var(--phone-radius) !important;
+  width:var(--phone-width) !important;
+  max-width:calc(100vw - 32px);
+  border-color:var(--phone-frame) !important;
+}
+.game-phone__device.phone-skin .game-phone__screen {
+  border-radius:var(--phone-screen-radius) !important;
+  background:var(--phone-paper) !important;
+}
+.game-phone__device.phone-skin .game-phone__speaker {
+  width:var(--phone-camera-width);
+  height:var(--phone-camera-height);
+  border-radius:var(--phone-camera-radius);
+  background:#141923;
+}
+.game-phone__device.phone-skin[data-phone-model="huwhyi"] .game-phone__speaker { left:43%; }
+.game-phone__device.phone-skin .game-phone__home { background:var(--phone-wallpaper) !important; }
+.game-phone__device.phone-skin :is(.game-phone__status-bar, .game-phone__app-header, .game-phone__navigation, .game-phone__app-screen, .game-phone__settings, .game-phone__messages, .game-phone__goals, .game-phone__contacts, .game-phone__map, .game-phone__garage, .game-phone__moto-eazi, .game-phone__megapay, .game-phone__inventory, .game-phone__debugger, .game-phone__music, .customize-shop) {
+  background:var(--phone-paper) !important;
+}
+.game-phone__device.phone-skin .game-phone__app-button .game-phone__app-icon {
+  border-radius:var(--phone-icon-radius);
+  color:var(--phone-accent) !important;
+  background:var(--phone-icon) !important;
+  border-color:transparent !important;
+  box-shadow:none !important;
+}
+.game-phone__device.phone-skin .game-phone__app-icon i { color:var(--phone-accent); }
+.game-phone__device.phone-skin .game-phone__hub { background:var(--phone-paper) !important; }
+.game-phone__device.phone-skin .game-phone__hub button { color:var(--phone-accent) !important; }
+.game-phone__device.phone-skin .game-phone__home-heading { letter-spacing:.02em; }
+
+@media (pointer: coarse) and (orientation: landscape) {
+  .game-phone__device.phone-skin { width:min(var(--phone-width),60vw) !important; }
+}

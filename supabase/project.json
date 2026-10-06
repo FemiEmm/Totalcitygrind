@@ -1,0 +1,9 @@
+{
+  "projectRef": "lseyihysmngwvgnzvdpf",
+  "url": "https://lseyihysmngwvgnzvdpf.supabase.co",
+  "publishableKey": "sb_publishable_Qb3nOhbe3mpOCJeBjgJa2Q_2XSSKOu5",
+  "storage": "private-postgres",
+  "auth": "backender",
+  "schemaVersion": 2,
+  "requiredMigration": "202610060002_game_tables.sql"
+}

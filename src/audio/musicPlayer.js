@@ -1,7 +1,8 @@
+import { createManagedAudio, onAudioBackground, isAudioBlocked } from "./audioLifecycle.js";
 import { reactive } from "vue";
 
 const AUDIO_SETTINGS_STORAGE_KEY =
-  "lagos-experience-audio-settings";
+  "lagos-experience-music-settings";
 const MUSIC_VOLUME = 0.12;
 const FADE_MILLISECONDS = 900;
 
@@ -63,6 +64,20 @@ const BUILT_IN_MUSIC_TRACKS = [
     title: "OLOPA",
     genre: "Fuji",
     source: "./sounds/world/game_music_8.mp3",
+  }),
+  Object.freeze({
+    id: "game-music-9",
+    number: 9,
+    artist: "MZTA DABI",
+    title: "DHABI",
+    source: "./sounds/world/game_music_9.mp3",
+  }),
+  Object.freeze({
+    id: "game-music-10",
+    number: 10,
+    artist: "MZTA DABI",
+    title: "MONEY N PACE",
+    source: "./sounds/world/game_music_10.mp3",
   }),
 ];
 
@@ -167,7 +182,7 @@ export async function openCustomMusicFolder() {
   return true;
 }
 
-function getMasterSettings() {
+export function getMusicSettings() {
   try {
     const saved = JSON.parse(
       window.localStorage.getItem(
@@ -187,8 +202,10 @@ function getMasterSettings() {
   }
 }
 
+export const musicAudioSettings = reactive(getMusicSettings());
+
 function getTargetVolume() {
-  const settings = getMasterSettings();
+  const settings = getMusicSettings();
   return settings.muted
     ? 0
     : MUSIC_VOLUME * settings.volume;
@@ -269,7 +286,7 @@ function ensureAudio() {
     return audio;
   }
 
-  audio = new Audio();
+  audio = createManagedAudio();
   audio.preload = "metadata";
   audio.addEventListener("ended", () => {
     if (gameplayPaused) return;
@@ -297,6 +314,7 @@ export function playMusicTrack(index, {
   source = "phone",
   fadeIn = false,
 } = {}) {
+  if (isAudioBlocked()) return false;
   if (gameplayPaused) {
     queuedPlayback = { index, mode, source, fadeIn };
     return false;
@@ -402,6 +420,7 @@ export function setMusicMode(mode) {
 
 export function refreshMusicVolume() {
   if (audio && musicPlayerState.playing) {
+    cancelFade();
     audio.volume = getTargetVolume();
   }
 }
@@ -437,4 +456,18 @@ export function leaveMainMenuMusic() {
 
 if (globalThis.window?.totalCityGrindMusic) {
   refreshCustomMusicLibrary();
+}
+
+onAudioBackground(() => {
+  if (typeof window !== "undefined") window.clearTimeout(gameplayStartTimer);
+  gameplayStartTimer = null;
+  pauseMusic();
+});
+
+export function setMusicSettings({volume=1,muted=false}) {
+  const settings={volume:Number.isFinite(Number(volume))?Math.min(1,Math.max(0,Number(volume))):1,muted:Boolean(muted)};
+  window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY,JSON.stringify(settings));
+  Object.assign(musicAudioSettings,settings);
+  refreshMusicVolume();
+  return musicAudioSettings;
 }

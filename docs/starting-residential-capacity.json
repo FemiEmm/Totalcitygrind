@@ -1,0 +1,301 @@
+{
+  "horizontal": [
+    {
+      "x": 7,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 27,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "north"
+      ]
+    }
+  ],
+  "mixed": [
+    {
+      "x": 7,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ],
+      "label": "A",
+      "decorativeBuildingsAffected": [
+        "residential-plot-003",
+        "residential-plot-004"
+      ]
+    },
+    {
+      "x": 27,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ],
+      "label": "B",
+      "decorativeBuildingsAffected": [
+        "residential-plot-002",
+        "residential-plot-005",
+        "residential-plot-070",
+        "residential-plot-071"
+      ]
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "north"
+      ],
+      "label": "C",
+      "decorativeBuildingsAffected": [
+        "residential-plot-009",
+        "residential-plot-010"
+      ]
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "east"
+      ],
+      "label": "D",
+      "decorativeBuildingsAffected": [
+        "residential-plot-006",
+        "residential-plot-011"
+      ]
+    },
+    {
+      "x": 21,
+      "y": 10,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west"
+      ],
+      "label": "E",
+      "decorativeBuildingsAffected": [
+        "residential-plot-008",
+        "residential-plot-013"
+      ]
+    }
+  ],
+  "geometric": [
+    {
+      "x": 7,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 27,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "north"
+      ]
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "east"
+      ]
+    },
+    {
+      "x": 21,
+      "y": 10,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "x": 7,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 27,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 28,
+      "y": 5,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 4,
+      "y": 11,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "north"
+      ]
+    },
+    {
+      "x": 4,
+      "y": 12,
+      "width": 4,
+      "height": 2,
+      "fronts": [
+        "south"
+      ]
+    },
+    {
+      "x": 29,
+      "y": 2,
+      "width": 2,
+      "height": 4,
+      "fronts": []
+    },
+    {
+      "x": 30,
+      "y": 2,
+      "width": 2,
+      "height": 4,
+      "fronts": []
+    },
+    {
+      "x": 29,
+      "y": 3,
+      "width": 2,
+      "height": 4,
+      "fronts": []
+    },
+    {
+      "x": 30,
+      "y": 3,
+      "width": 2,
+      "height": 4,
+      "fronts": []
+    },
+    {
+      "x": 11,
+      "y": 9,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "east"
+      ]
+    },
+    {
+      "x": 11,
+      "y": 10,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west",
+        "east"
+      ]
+    },
+    {
+      "x": 21,
+      "y": 10,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west"
+      ]
+    },
+    {
+      "x": 22,
+      "y": 10,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "east"
+      ]
+    },
+    {
+      "x": 11,
+      "y": 11,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west",
+        "east"
+      ]
+    },
+    {
+      "x": 21,
+      "y": 11,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west"
+      ]
+    },
+    {
+      "x": 22,
+      "y": 11,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "east"
+      ]
+    },
+    {
+      "x": 11,
+      "y": 12,
+      "width": 2,
+      "height": 4,
+      "fronts": [
+        "west"
+      ]
+    }
+  ]
+}

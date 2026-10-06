@@ -146,9 +146,7 @@ function skipTour() {
   border: 3px solid #ffd348;
   border-radius: 18px;
   box-shadow:
-    0 0 0 9999px rgb(2 13 40 / 78%),
-    0 0 0 7px rgb(255 211 72 / 24%),
-    0 0 28px #ffc51b;
+    0 2px 8px rgb(23 33 58 / 10%);
   pointer-events: none;
   transition: all 260ms ease;
 }

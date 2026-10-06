@@ -119,7 +119,7 @@ function formatMoney(value) {
       transparent 2px 9px
     ),
     linear-gradient(150deg, rgb(67 63 53 / 99%), rgb(24 24 20 / 99%));
-  box-shadow: var(--hud-shadow), 0 28px 70px rgb(0 0 0 / 58%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   clip-path: polygon(
     12px 0,
     100% 0,

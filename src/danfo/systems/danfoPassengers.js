@@ -56,6 +56,7 @@ export function createDanfoPassengerState(config) {
 }
 
 export function startDanfoPassengerRoute({
+  sharedPopulation = false,
   passengerState,
   route,
   config,
@@ -67,6 +68,7 @@ export function startDanfoPassengerRoute({
   passengerState.lastStopResult = null;
   passengerState.feedbackSecondsRemaining = 0;
 
+  if (sharedPopulation) return;
   route.stopIds.forEach((stopId, stopIndex) => {
     const isFinalStop = stopIndex === route.stopIds.length - 1;
 

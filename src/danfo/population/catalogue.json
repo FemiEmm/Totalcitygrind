@@ -1,0 +1,673 @@
+{
+  "stops": [
+    {
+      "id": "res-stop-home",
+      "label": "Alakuko",
+      "x": 720,
+      "y": 720,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "res-stop-garage",
+      "label": "Ahmadiyya",
+      "x": 1680,
+      "y": 480,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "res-stop-clinic",
+      "label": "Abule Egba",
+      "x": 2400,
+      "y": 720,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "res-stop-loop",
+      "label": "Meiran",
+      "x": 600,
+      "y": 1080,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "res-stop-estate",
+      "label": "Abule Oki",
+      "x": 2520,
+      "y": 1080,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "res-stop-east",
+      "label": "Pleasure",
+      "x": 3600,
+      "y": 1080,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-west",
+      "label": "Ile Epo",
+      "x": 3960,
+      "y": 720,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-terminal-a",
+      "label": "Iyana Ipaja",
+      "x": 5160,
+      "y": 720,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-terminal-b",
+      "label": "Dopemu",
+      "x": 4800,
+      "y": 1320,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-office",
+      "label": "Mangoro",
+      "x": 6000,
+      "y": 1080,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-market",
+      "label": "Agege",
+      "x": 6000,
+      "y": 360,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-east",
+      "label": "Ikeja Along",
+      "x": 6720,
+      "y": 720,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-dealer",
+      "label": "Sogunle",
+      "x": 4920,
+      "y": 1800,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "work-stop-interchange",
+      "label": "Oshodi",
+      "x": 6120,
+      "y": 1320,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-olowo-epo",
+      "label": "Gowon Estate",
+      "x": 1560,
+      "y": 2400,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-waterway",
+      "label": "Akowonjo",
+      "x": 3720,
+      "y": 2400,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-north",
+      "label": "Egbeda",
+      "x": 960,
+      "y": 2640,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-circle",
+      "label": "Shasha",
+      "x": 2520,
+      "y": 2640,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-shopping",
+      "label": "Idimu",
+      "x": 2160,
+      "y": 3120,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-hospital",
+      "label": "Igando",
+      "x": 360,
+      "y": 3600,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-south",
+      "label": "Ikotun",
+      "x": 1440,
+      "y": 3960,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "wealth-stop-hotel",
+      "label": "Ejigbo",
+      "x": 3240,
+      "y": 3600,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-old-airport",
+      "label": "Mushin",
+      "x": 5400,
+      "y": 2400,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-work-link",
+      "label": "Ladipo",
+      "x": 4560,
+      "y": 2640,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-clubs",
+      "label": "Isolo",
+      "x": 4080,
+      "y": 3000,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-circle",
+      "label": "Ilupeju",
+      "x": 5160,
+      "y": 3000,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-restaurants",
+      "label": "Palmgrove",
+      "x": 6480,
+      "y": 3000,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-harbour",
+      "label": "Ojuelegba",
+      "x": 5040,
+      "y": 3600,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-events",
+      "label": "Yaba",
+      "x": 6120,
+      "y": 3600,
+      "width": 120,
+      "height": 120
+    },
+    {
+      "id": "night-stop-south-terminal",
+      "label": "Oyingbo",
+      "x": 6360,
+      "y": 3960,
+      "width": 120,
+      "height": 120
+    }
+  ],
+  "routes": [
+    {
+      "id": "R1",
+      "name": "Alakuko to Agege",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-home",
+        "res-stop-garage",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-a",
+        "work-stop-market"
+      ]
+    },
+    {
+      "id": "R2",
+      "name": "Abule Egba to Mangoro",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-clinic",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-b",
+        "work-stop-office"
+      ]
+    },
+    {
+      "id": "R3",
+      "name": "Meiran to Dopemu",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-loop",
+        "res-stop-garage",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-b"
+      ]
+    },
+    {
+      "id": "R4",
+      "name": "Abule Oki to Ejigbo",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-estate",
+        "res-stop-east",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "wealth-stop-hotel"
+      ]
+    },
+    {
+      "id": "W1",
+      "name": "Market and Office Shuttle",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "work-stop-market",
+        "work-stop-office",
+        "work-stop-interchange",
+        "work-stop-east"
+      ]
+    },
+    {
+      "id": "W2",
+      "name": "Ikeja LGA Crosstown",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "work-stop-west",
+        "work-stop-terminal-a",
+        "work-stop-terminal-b",
+        "work-stop-office",
+        "work-stop-market",
+        "work-stop-east"
+      ]
+    },
+    {
+      "id": "W3",
+      "name": "Terminal Connector",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "work-stop-terminal-a",
+        "work-stop-market",
+        "work-stop-office",
+        "work-stop-interchange",
+        "work-stop-dealer"
+      ]
+    },
+    {
+      "id": "N1",
+      "name": "Ikeja LGA to Mushin LGA",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "work-stop-terminal-a",
+        "work-stop-office",
+        "work-stop-market",
+        "work-stop-interchange",
+        "night-stop-work-link",
+        "night-stop-clubs",
+        "night-stop-circle",
+        "night-stop-restaurants"
+      ]
+    },
+    {
+      "id": "N2",
+      "name": "Mushin to Yaba",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "night-stop-old-airport",
+        "night-stop-work-link",
+        "night-stop-clubs",
+        "night-stop-circle",
+        "night-stop-harbour",
+        "night-stop-events"
+      ]
+    },
+    {
+      "id": "N3",
+      "name": "Ojuelegba Club Loop",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "night-stop-harbour",
+        "night-stop-events",
+        "night-stop-restaurants",
+        "night-stop-circle",
+        "night-stop-clubs"
+      ]
+    },
+    {
+      "id": "H1",
+      "name": "Igando to Oshodi",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-hospital",
+        "wealth-stop-south",
+        "wealth-stop-shopping",
+        "wealth-stop-circle",
+        "wealth-stop-hotel",
+        "work-stop-dealer",
+        "work-stop-interchange"
+      ]
+    },
+    {
+      "id": "H2",
+      "name": "Akowonjo to Idimu",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-waterway",
+        "wealth-stop-north",
+        "wealth-stop-circle",
+        "wealth-stop-hotel",
+        "wealth-stop-shopping"
+      ]
+    },
+    {
+      "id": "H3",
+      "name": "Egbeda to Abule Egba",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-north",
+        "wealth-stop-circle",
+        "wealth-stop-hospital",
+        "res-stop-east",
+        "res-stop-estate",
+        "res-stop-clinic"
+      ]
+    },
+    {
+      "id": "H4",
+      "name": "Ejigbo to Yaba",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-hotel",
+        "wealth-stop-shopping",
+        "work-stop-dealer",
+        "work-stop-interchange",
+        "night-stop-circle",
+        "night-stop-events"
+      ]
+    },
+    {
+      "id": "H5",
+      "name": "Gowon Estate to Agege",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-olowo-epo",
+        "wealth-stop-north",
+        "wealth-stop-circle",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-a",
+        "work-stop-market"
+      ]
+    },
+    {
+      "id": "HW1",
+      "name": "Mainland Highway Express",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-olowo-epo",
+        "wealth-stop-north",
+        "wealth-stop-circle",
+        "work-stop-interchange",
+        "night-stop-work-link",
+        "night-stop-old-airport"
+      ]
+    },
+    {
+      "id": "HW2",
+      "name": "Akowonjo–Ojuelegba Express",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-waterway",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "work-stop-interchange",
+        "night-stop-circle",
+        "night-stop-harbour"
+      ]
+    },
+    {
+      "id": "HW3",
+      "name": "Igando–Yaba Express",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-hospital",
+        "wealth-stop-south",
+        "wealth-stop-shopping",
+        "work-stop-dealer",
+        "work-stop-interchange",
+        "night-stop-events"
+      ]
+    },
+    {
+      "id": "HW4",
+      "name": "West–East Highway Line",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-loop",
+        "res-stop-garage",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-interchange",
+        "night-stop-circle",
+        "night-stop-restaurants"
+      ]
+    },
+    {
+      "id": "HW5",
+      "name": "Lagos Grand Trunk",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-home",
+        "res-stop-clinic",
+        "res-stop-east",
+        "wealth-stop-circle",
+        "work-stop-dealer",
+        "work-stop-interchange",
+        "night-stop-work-link",
+        "night-stop-clubs",
+        "night-stop-harbour"
+      ]
+    },
+    {
+      "id": "X1",
+      "name": "Four LGA Grand Line",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "res-stop-home",
+        "res-stop-clinic",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-a",
+        "work-stop-interchange",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "wealth-stop-hotel",
+        "night-stop-work-link",
+        "night-stop-clubs",
+        "night-stop-harbour"
+      ]
+    },
+    {
+      "id": "X2",
+      "name": "City Discovery Line",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "wealth-stop-waterway",
+        "wealth-stop-north",
+        "wealth-stop-hospital",
+        "res-stop-east",
+        "res-stop-loop",
+        "work-stop-market",
+        "work-stop-office",
+        "night-stop-circle",
+        "night-stop-events"
+      ]
+    },
+    {
+      "id": "X3",
+      "name": "Mainland Complete",
+      "job": "danfo",
+      "capacity": 14,
+      "stopIds": [
+        "night-stop-old-airport",
+        "night-stop-work-link",
+        "night-stop-restaurants",
+        "work-stop-interchange",
+        "work-stop-dealer",
+        "wealth-stop-shopping",
+        "wealth-stop-circle",
+        "wealth-stop-north",
+        "wealth-stop-olowo-epo"
+      ]
+    },
+    {
+      "id": "BRT-A",
+      "name": "Alakuko–Iyana Ipaja Service",
+      "job": "brt",
+      "capacity": 48,
+      "stopIds": [
+        "res-stop-home",
+        "res-stop-garage",
+        "res-stop-estate",
+        "work-stop-west",
+        "work-stop-terminal-a"
+      ]
+    },
+    {
+      "id": "BRT-B",
+      "name": "Iyana Ipaja–Alimosho Express",
+      "job": "brt",
+      "capacity": 48,
+      "stopIds": [
+        "work-stop-terminal-a",
+        "work-stop-market",
+        "work-stop-office",
+        "work-stop-interchange",
+        "work-stop-dealer",
+        "wealth-stop-hotel",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "wealth-stop-south",
+        "res-stop-east",
+        "res-stop-estate",
+        "res-stop-clinic",
+        "res-stop-home"
+      ]
+    },
+    {
+      "id": "BRT-C",
+      "name": "Igando–Dopemu Service",
+      "job": "brt",
+      "capacity": 48,
+      "stopIds": [
+        "wealth-stop-hospital",
+        "wealth-stop-south",
+        "wealth-stop-shopping",
+        "wealth-stop-circle",
+        "wealth-stop-hotel",
+        "work-stop-dealer",
+        "work-stop-interchange",
+        "work-stop-terminal-b"
+      ]
+    },
+    {
+      "id": "BRT-D",
+      "name": "Oyingbo–Alimosho Cross-City",
+      "job": "brt",
+      "capacity": 48,
+      "stopIds": [
+        "night-stop-south-terminal",
+        "night-stop-events",
+        "night-stop-harbour",
+        "night-stop-circle",
+        "night-stop-work-link",
+        "work-stop-interchange",
+        "work-stop-dealer",
+        "wealth-stop-hotel",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "wealth-stop-south",
+        "res-stop-east",
+        "res-stop-estate",
+        "res-stop-home"
+      ]
+    },
+    {
+      "id": "BRT-E",
+      "name": "All Lagos Grand Trunk",
+      "job": "brt",
+      "capacity": 48,
+      "stopIds": [
+        "res-stop-home",
+        "res-stop-clinic",
+        "res-stop-east",
+        "wealth-stop-circle",
+        "wealth-stop-shopping",
+        "wealth-stop-hotel",
+        "work-stop-dealer",
+        "work-stop-interchange",
+        "night-stop-work-link",
+        "night-stop-clubs",
+        "night-stop-harbour",
+        "night-stop-events",
+        "night-stop-south-terminal"
+      ]
+    }
+  ]
+}

@@ -102,7 +102,7 @@ const lightStyle = computed(() => {
   border: 2px solid #08090b;
   border-radius: 5px;
   background: #252a31;
-  box-shadow: 0 2px 0 rgb(0 0 0 / 35%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .highway-light__lamp {
@@ -127,6 +127,6 @@ const lightStyle = computed(() => {
 
 .highway-light__lamp--active {
   opacity: 1;
-  box-shadow: 0 0 7px currentColor;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 </style>

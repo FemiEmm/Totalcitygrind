@@ -21,6 +21,13 @@ function normaliseInventory(value) {
   );
 }
 
+// Seed only from the explicit new-game flow, never when loading or travelling.
+export function startNewPlayerInventory() {
+  const inventory = { items: { bread: 2, "bottled-water": 1 } };
+  savePlayerInventory(inventory);
+  return inventory;
+}
+
 export function createPlayerInventoryState() {
   if (typeof window === "undefined") {
     return { items: {} };

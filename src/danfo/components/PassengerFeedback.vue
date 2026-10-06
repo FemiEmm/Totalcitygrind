@@ -14,6 +14,7 @@ defineProps({
     <div class="passenger-feedback__stats">
       <span>{{ result.exitedCount }} EXITED</span>
       <span>{{ result.boardedCount }} BOARDED</span>
+      <span v-if="result.remainingWaiting != null">{{ result.remainingWaiting }} WAITING</span>
       <span v-if="result.fareEarned > 0">PAYMENT MESSAGE SENT</span>
     </div>
   </aside>
@@ -35,7 +36,7 @@ defineProps({
     rgb(11 52 121 / 97%)
   );
   box-shadow: var(--game-panel-shadow);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font-family: "Basic", sans-serif;
   text-align: center;
   transform: translateX(-50%);

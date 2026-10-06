@@ -22,6 +22,21 @@ slots.clearSaveSlot();
 assert.equal(slots.getSaveSlots()[1].exists,false,'Implicit clear uses the active slot');
 assert.ok(![...storage.keys()].some(k=>k.includes('backup')),'Clear must not make recovery copies');
 
+// New games receive food once; loading or changing worlds never refills it.
+slots.setActiveSaveSlotId(1);
+const starter = inventory.startNewPlayerInventory();
+assert.deepEqual(starter.items, {bread:2, 'bottled-water':1});
+assert.deepEqual(inventory.createPlayerInventoryState().items, starter.items);
+inventory.consumeInventoryItem(starter, 'bread');
+inventory.consumeInventoryItem(starter, 'bread');
+inventory.consumeInventoryItem(starter, 'bottled-water');
+assert.deepEqual(inventory.createPlayerInventoryState().items, {}, 'Empty inventory must stay empty after reload');
+slots.setActiveSaveSlotId(2);
+assert.deepEqual(inventory.createPlayerInventoryState().items, {}, 'Starter food must not leak into other slots');
+slots.setActiveSaveSlotId(1);
+slots.clearSaveSlot();
+assert.deepEqual(inventory.startNewPlayerInventory().items, {bread:2, 'bottled-water':1}, 'A fresh game gets a fresh starter pack');
+
 const source=fs.readFileSync(new URL('../src/game/components/TouchControls.vue',import.meta.url),'utf8');
 const setup=source.match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*? from ".*?";/gm,'');
 const events=[];const cleanup=[];

@@ -23,7 +23,7 @@ const emit = defineEmits(["continue"]);
       <span>ROUTE {{ route.id }}</span>
       <h2>Route complete</h2>
       <p>{{ route.name }}</p>
-      <strong class="route-complete__bonus">
+      <strong v-if="bonus > 0" class="route-complete__bonus">
         PAYMENT RECEIPT SENT TO MESSAGES
       </strong>
       <button type="button" @click="emit('continue')">
@@ -52,7 +52,7 @@ const emit = defineEmits(["continue"]);
   background:
     repeating-linear-gradient(135deg, rgb(255 255 255 / 2%) 0 2px, transparent 2px 9px),
     linear-gradient(150deg, rgb(67 63 53 / 98%), rgb(24 24 20 / 98%));
-  box-shadow: var(--hud-shadow), 0 24px 60px rgb(0 0 0 / 55%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   text-align: center;
   clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
 }

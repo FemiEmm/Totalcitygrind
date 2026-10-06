@@ -1,3 +1,5 @@
+import {getSaveAccount} from '../../game/saveSlots.js';
+import { notifyTransaction, createMarketReceiptId } from './transactionObservers.js';
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
 }
@@ -19,6 +21,7 @@ function recordLedgerTransaction(economyState, transaction) {
     direction: transaction.direction,
     createdAt: Date.now(),
   });
+  notifyTransaction(economyState, { ...transaction, marketEventId: createMarketReceiptId() });
   economyState.nextTransactionNumber += 1;
   economyState.transactions =
     economyState.transactions.slice(0, 100);
@@ -61,6 +64,8 @@ export function normaliseLoanState(economyState, config) {
     economyState.bankLoanBalance = 0;
   }
 
+  economyState.quickLoanInterestRemaining ??= 0;
+  economyState.bankLoanInterestRemaining ??= 0;
   economyState.quickLoanBalance ??= 0;
   economyState.bankLoanBalance ??= 0;
   economyState.bankLoanEligible ??=
@@ -79,6 +84,8 @@ export function createDanfoEconomyState(config, startingDay = 1) {
     totalExpenses: 0,
     transactions: [],
     nextTransactionNumber: 1,
+    quickLoanInterestRemaining: 0,
+    bankLoanInterestRemaining: 0,
     loanBalance: 0,
     quickLoanBalance: 0,
     bankLoanBalance: 0,
@@ -88,6 +95,7 @@ export function createDanfoEconomyState(config, startingDay = 1) {
     lastBankColdCallDay: 0,
     ownedVehicleIds: [],
     selectedPrivateVehicleId: null,
+    lastAgberoTicketDay: 0,
     lastRouteBonus: 0,
     lastTransaction: null,
     feedbackSecondsRemaining: 0,
@@ -131,6 +139,7 @@ export function purchasePlayerVehicle({
 }
 
 export function addMotoEaziFare(economyState, amount) {
+  if(getSaveAccount())return;
   const fare = Math.max(0, Math.round(amount));
   economyState.money += fare;
 
@@ -151,6 +160,7 @@ export function creditIncome({
   label,
   config,
 }) {
+  if(getSaveAccount())return;
   const income = Math.max(0, Math.round(amount));
 
   if (income <= 0) {
@@ -178,6 +188,7 @@ export function chargeExpense({
   label,
   config,
 }) {
+  if(getSaveAccount())return;
   const cost = Math.max(0, Math.round(amount));
 
   if (cost <= 0) {
@@ -204,6 +215,7 @@ export function addEmergencyBankLoan({
   amount,
   config,
 }) {
+  if(getSaveAccount())return;
   const principal = Math.max(0, Math.ceil(Number(amount) || 0));
 
   if (principal <= 0) {
@@ -284,6 +296,7 @@ export function borrowBankLoan({
   );
   economyState.money += principal;
   economyState.bankLoanBalance = principal + interest;
+  economyState.bankLoanInterestRemaining = interest;
   syncLoanBalances(economyState);
 
   setTransaction(
@@ -324,6 +337,7 @@ export function borrowQuickLoan({
   );
   economyState.money += principal;
   economyState.quickLoanBalance = principal + interest;
+  economyState.quickLoanInterestRemaining = interest;
   syncLoanBalances(economyState);
 
   setTransaction(
@@ -375,6 +389,9 @@ export function repayBankLoan({
   }
 
   const paid = Math.min(payment, economyState[balanceKey]);
+  const interestKey = loanType === "bank" ? "bankLoanInterestRemaining" : "quickLoanInterestRemaining";
+  const interestPaid = paid * (economyState[interestKey] || 0) / economyState[balanceKey];
+  economyState[interestKey] = Math.max(0, (economyState[interestKey] || 0) - interestPaid);
   economyState.money -= paid;
   economyState.totalExpenses += paid;
   economyState[balanceKey] -= paid;
@@ -384,6 +401,7 @@ export function repayBankLoan({
     economyState,
     {
       type: "loan-repayment",
+      interestPaid,
       amount: paid,
       direction: "expense",
       label:
@@ -403,6 +421,7 @@ export function repayBankLoan({
 }
 
 export function addPassengerFare(economyState, amount) {
+  if(getSaveAccount())return;
   const safeAmount = Math.max(0, Math.round(amount));
 
   economyState.money += safeAmount;
@@ -417,38 +436,19 @@ export function addPassengerFare(economyState, amount) {
   return safeAmount;
 }
 
-export function getRouteCompletionBonus(route, config) {
-  const stopCount = route?.stopIds?.length ?? 0;
-
-  return (
-    config.routeCompletionBaseBonus +
-    stopCount * config.routeCompletionBonusPerStop
-  );
-}
-
-export function awardRouteCompletionBonus({
-  economyState,
-  route,
-  config,
-}) {
-  const bonus = getRouteCompletionBonus(route, config);
-
-  economyState.money += bonus;
-  economyState.totalRouteBonuses += bonus;
-  economyState.lastRouteBonus = bonus;
-
-  setTransaction(
-    economyState,
-    {
-      type: "route-bonus",
-      amount: bonus,
-      direction: "income",
-      label: "ROUTE COMPLETION BONUS",
-    },
+export function chargeAgberoPickup({ economyState, currentDay, boardedCount, config }) {
+  if (!(boardedCount > 0)) return null;
+  const day = Math.max(1, Math.floor(Number(currentDay) || 1));
+  const firstPickup = economyState.lastAgberoTicketDay !== day;
+  const amount = firstPickup ? 1000 : 300;
+  const reason = firstPickup ? "owo ticket" : "owo loading";
+  chargeExpense({
+    economyState, amount, type: "agbero-payment",
+    label: "Paid agbero " + amount.toLocaleString("en-NG") + " - " + reason,
     config,
-  );
-
-  return bonus;
+  });
+  economyState.lastAgberoTicketDay = day;
+  return { amount, reason };
 }
 
 export function clearLastRouteBonus(economyState) {
@@ -460,6 +460,7 @@ export function processDailyGarageFees({
   currentDay,
   config,
 }) {
+  if(getSaveAccount())return;
   if (economyState.gameOver) {
     return null;
   }
@@ -520,6 +521,7 @@ export function processDailyBrtTax({
   currentDay,
   config,
 }) {
+  if(getSaveAccount())return;
   let latestTransaction = null;
 
   while (economyState.lastProcessedDay < currentDay) {

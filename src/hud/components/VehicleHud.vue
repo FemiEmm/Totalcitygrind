@@ -442,11 +442,11 @@ const engineStatus = computed(() => {
   display: grid;
   width: 28px;
   height: 22px;
-  border: 2px solid #11182b;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 7px;
   background: #ffd43b;
   color: #11182b;
-  box-shadow: 2px 3px 0 #11182b;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font-size: 11px;
   font-weight: 900;
   place-items: center;
@@ -481,8 +481,7 @@ const engineStatus = computed(() => {
   border-radius: 3px;
   background: #171713;
   box-shadow:
-    inset 1px 1px 2px #050504,
-    1px 1px rgb(255 255 255 / 7%);
+    none;
 }
 
 .vehicle-hud__manual-line--top {
@@ -536,8 +535,7 @@ const engineStatus = computed(() => {
 .vehicle-hud__manual-neutral--active {
   color: #f3d36f;
   text-shadow:
-    0 0 5px rgb(243 211 111 / 90%),
-    0 0 12px rgb(243 211 111 / 55%);
+    none;
   transform: scale(1.25);
 }
 
@@ -566,7 +564,7 @@ const engineStatus = computed(() => {
 
 .vehicle-hud__manual-neutral--active {
   border-color: #f3d36f;
-  box-shadow: 0 0 10px rgb(243 211 111 / 50%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   transform: translate(-50%, -50%) scale(1.15);
 }
 
@@ -581,7 +579,7 @@ const engineStatus = computed(() => {
   border-radius: 50%;
   background:
     radial-gradient(circle at 38% 32%, #ece8dd, #8a867d 55%, #4f4d48);
-  box-shadow: 0 4px 7px rgb(0 0 0 / 68%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   transform: translate(-50%, -50%);
   transition:
     left 180ms ease,
@@ -612,7 +610,7 @@ const engineStatus = computed(() => {
   border: 1px solid #655f50;
   color: #aaa494;
   background: rgb(10 10 8 / 82%);
-  box-shadow: inset 0 0 8px rgb(0 0 0 / 55%);
+  box-shadow: none;
   gap: 5px;
   font-size: 9px;
   font-weight: 900;
@@ -673,7 +671,7 @@ const engineStatus = computed(() => {
   height: 32px;
   border-radius: 4px;
   background: #f04444;
-  box-shadow: 0 0 7px rgb(240 68 68 / 65%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   transform: rotate(var(--speed-needle));
   transform-origin: 50% 100%;
 }
@@ -746,7 +744,7 @@ const engineStatus = computed(() => {
 .vehicle-hud__gear-indicators
   .vehicle-hud__gear-indicator--active {
   color: #e1d5b5;
-  text-shadow: 0 0 8px rgb(220 202 150 / 55%);
+  text-shadow: none;
 }
 
 .vehicle-hud__gear-mechanism {
@@ -766,8 +764,7 @@ const engineStatus = computed(() => {
   border-radius: 9px;
   background: #151512;
   box-shadow:
-    inset 2px 0 4px #050504,
-    inset -2px 0 4px #5d584c;
+    none;
 }
 
 .vehicle-hud__gear-shaft {
@@ -778,7 +775,7 @@ const engineStatus = computed(() => {
   height: 30px;
   border-radius: 3px;
   background: linear-gradient(90deg, #77736a, #e0dcd2 52%, #5b5851);
-  box-shadow: 0 1px 3px #000;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   transform:
     translateY(calc(var(--gear-position) * 18px));
   transition: transform 180ms ease;
@@ -793,7 +790,7 @@ const engineStatus = computed(() => {
   border: 1px solid #e0dacb;
   border-radius: 10px 10px 8px 8px;
   background: linear-gradient(90deg, #77736b, #ddd9cf 48%, #5d5a54);
-  box-shadow: 0 4px 6px rgb(0 0 0 / 64%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   transform:
     translateY(calc(var(--gear-position) * 24px));
   transition: transform 180ms ease;
@@ -815,7 +812,7 @@ const engineStatus = computed(() => {
   border: 1px solid #6e6756;
   border-radius: 2px;
   background: #171713;
-  box-shadow: inset 0 0 8px #080806;
+  box-shadow: none;
 }
 
 .vehicle-hud__digital small {
@@ -839,8 +836,7 @@ const engineStatus = computed(() => {
   letter-spacing: 0.04em;
   line-height: 1;
   text-shadow:
-    0 0 4px rgb(230 202 127 / 55%),
-    0 0 9px rgb(230 202 127 / 18%);
+    none;
 }
 
 .vehicle-hud__digital strong b {

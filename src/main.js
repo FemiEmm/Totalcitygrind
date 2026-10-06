@@ -4,6 +4,7 @@ import App from "./App.vue";
 import { installGameUiSounds } from "./audio/gameAudio.js";
 import "./styles/global.css";
 import "./styles/mobile.css";
+import "./styles/ui-refinements.css";
 
 installGameUiSounds();
 createApp(App).mount("#app");

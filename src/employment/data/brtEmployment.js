@@ -74,8 +74,8 @@ export const BRT_PASSENGER_CONFIG = Object.freeze({
 export const BRT_ROUTES = Object.freeze([
   Object.freeze({
     id: "BRT-A",
-    name: "Home–Central Service",
-    direction: "Home Junction Terminus → Terminal A",
+    name: "Alakuko–Iyana Ipaja Service",
+    direction: "Alakuko Terminus → Iyana Ipaja",
     stopIds: Object.freeze([
       "res-stop-home",
       "res-stop-garage",
@@ -86,8 +86,8 @@ export const BRT_ROUTES = Object.freeze([
   }),
   Object.freeze({
     id: "BRT-B",
-    name: "Central–Wealth Express",
-    direction: "Terminal A → Home Junction Terminus via Wealthy Residential",
+    name: "Iyana Ipaja–Alimosho Express",
+    direction: "Iyana Ipaja → Alakuko Terminus via Alimosho LGA",
     stopIds: Object.freeze([
       "work-stop-terminal-a",
       "work-stop-market",
@@ -106,8 +106,8 @@ export const BRT_ROUTES = Object.freeze([
   }),
   Object.freeze({
     id: "BRT-C",
-    name: "Wealth District–Central",
-    direction: "Private Clinic Terminus → Terminal B",
+    name: "Igando–Dopemu Service",
+    direction: "Igando Terminus → Dopemu",
     stopIds: Object.freeze([
       "wealth-stop-hospital",
       "wealth-stop-south",
@@ -121,8 +121,8 @@ export const BRT_ROUTES = Object.freeze([
   }),
   Object.freeze({
     id: "BRT-D",
-    name: "South–Wealth Cross-City",
-    direction: "South Terminal → Home Junction Terminus via Wealthy Residential",
+    name: "Oyingbo–Alimosho Cross-City",
+    direction: "Oyingbo → Alakuko Terminus via Alimosho LGA",
     stopIds: Object.freeze([
       "night-stop-south-terminal",
       "night-stop-events",
@@ -143,7 +143,7 @@ export const BRT_ROUTES = Object.freeze([
   Object.freeze({
     id: "BRT-E",
     name: "All Lagos Grand Trunk",
-    direction: "Home Junction Terminus → South Terminal",
+    direction: "Alakuko Terminus → Oyingbo",
     stopIds: Object.freeze([
       "res-stop-home",
       "res-stop-clinic",

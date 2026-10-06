@@ -27,9 +27,9 @@ export function createPhoneCallSchedulerState() {
     cooldownSeconds: 75,
     sequence: 0,
     lastRandomCallId: null,
+    lastRandomCallDay: readLastRandomCallDay(),
   };
 }
-    lastRandomCallDay: readLastRandomCallDay(),
 
 function activateCall(state, callId) {
   const definition = getPhoneCallVoice(callId);

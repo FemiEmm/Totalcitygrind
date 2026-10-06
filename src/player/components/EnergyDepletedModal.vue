@@ -62,7 +62,7 @@ defineEmits(["clinic"]);
   background:
     repeating-linear-gradient(135deg, rgb(255 255 255 / 2%) 0 2px, transparent 2px 8px),
     linear-gradient(180deg, #34332c, #171813);
-  box-shadow: 0 18px 55px rgb(0 0 0 / 65%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   color: #f4f0df;
   font-family: "Basic", sans-serif;
   text-align: center;

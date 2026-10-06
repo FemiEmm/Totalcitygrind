@@ -1,0 +1,12 @@
+node_modules/
+.env
+/data/
+/exports/
+*.log
+
+.env.*
+!.env.example
+!.env.supabase.example
+/certs/
+
+!.env.render.example

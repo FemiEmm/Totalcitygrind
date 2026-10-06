@@ -507,6 +507,7 @@ function updateSteering(
   deltaSeconds,
   config,
   canOccupy,
+  steeringBias = 0,
 ) {
   const steeringLeft = isPressed(
     pressedKeys,
@@ -521,7 +522,7 @@ function updateSteering(
   );
 
   const steeringInput =
-    Number(steeringRight) - Number(steeringLeft);
+    clamp(Number(steeringRight) - Number(steeringLeft) + steeringBias, -1, 1);
 
   if (steeringInput === 0 || Math.abs(vehicle.speed) < 4) {
     return;
@@ -778,6 +779,7 @@ function updatePosition(
 }
 
 export function updatePlayerVehicle({
+  steeringBias = 0,
   vehicle,
   pressedKeys,
   deltaSeconds,
@@ -801,6 +803,7 @@ export function updatePlayerVehicle({
     deltaSeconds,
     config,
     canOccupy,
+    steeringBias,
   );
 
   return updatePosition(

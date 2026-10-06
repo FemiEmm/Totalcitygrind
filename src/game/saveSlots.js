@@ -1,3 +1,8 @@
+import { LOCAL_STUDIO } from "./localStudio.js";
+let saveAccount = null;
+export function setSaveAccount(id = null) { saveAccount = id; }
+export function getSaveAccount() { return saveAccount; }
+const accountSuffix = () => saveAccount ? '-account-' + saveAccount : LOCAL_STUDIO ? '-studio' : '';
 const SAVE_STORAGE_KEY = "total-city-grind-fresh-v2";
 const ACTIVE_SAVE_SLOT_STORAGE_KEY = "total-city-grind-active-save-slot-v2";
 
@@ -28,11 +33,11 @@ export function setActiveSaveSlotId(value) {
 
 export function getSaveStorageKey(value = getActiveSaveSlotId()) {
   const slotId = normaliseSaveSlotId(value);
-  return `${SAVE_STORAGE_KEY}-slot-${slotId}`;
+  return `${SAVE_STORAGE_KEY}${accountSuffix()}-slot-${slotId}`;
 }
 
 export function getSlotStorageKey(namespace, value = getActiveSaveSlotId()) {
-  return `${namespace}-v2-slot-${normaliseSaveSlotId(value)}`;
+  return `${namespace}-v2${accountSuffix()}-slot-${normaliseSaveSlotId(value)}`;
 }
 
 export function clearSaveSlot(value = getActiveSaveSlotId()) {

@@ -31,7 +31,7 @@ const formatMoney = (value) =>
       <div v-if="!businessState.officeOwned" class="business__purchase">
         <i class="fa-solid fa-building" aria-hidden="true" />
         <div>
-          <h3>Work Hub Office</h3>
+          <h3>Ikeja LGA Office</h3>
           <p>Purchase permanent office space to employ drivers and manage income-producing vehicles.</p>
           <small v-if="!requirementMet">Own the Mainland Terrace before opening a company.</small>
         </div>
@@ -85,7 +85,7 @@ const formatMoney = (value) =>
 
 <style scoped>
 .business-modal { position:absolute; z-index:120; inset:0; display:grid; place-items:center; padding:18px; background:#07131fc9; }
-.business { position:relative; width:min(920px,95vw); max-height:92vh; overflow:auto; border:2px solid #aaa184; color:#eee9d8; background:#292820; box-shadow:0 20px 50px #000c; }
+.business { position:relative; width:min(920px,95vw); max-height:92vh; overflow:auto; border:2px solid #aaa184; color:#eee9d8; background:#292820; box-shadow:0 2px 8px rgb(23 33 58 / 10%); }
 .business::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.2; background:repeating-linear-gradient(135deg,#fff1 0 2px,transparent 2px 10px); }
 .business__close { position:absolute; z-index:2; top:14px; right:14px; width:38px; height:38px; border:1px solid #716a56; color:#eee9d8; background:#3b382d; font-size:25px; }
 header { position:relative; z-index:1; padding:24px 28px 18px; border-bottom:1px solid #68614e; }

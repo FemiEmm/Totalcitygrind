@@ -1,6 +1,7 @@
 import {
   GRID_SIZE,
   WORLD_HEIGHT,
+  WORLD_MIN_Y,
   WORLD_WIDTH,
 } from "../../world/data/mapConstants.js";
 import {
@@ -108,14 +109,7 @@ function getRightVector(rotation) {
   };
 }
 
-function rectanglesOverlap(first, second) {
-  return (
-    first.x < second.x + second.width &&
-    first.x + first.width > second.x &&
-    first.y < second.y + second.height &&
-    first.y + first.height > second.y
-  );
-}
+
 
 function distanceBetween(first, second) {
   return Math.hypot(second.x - first.x, second.y - first.y);
@@ -126,7 +120,7 @@ function isAtWorldEdge(vehicle) {
 
   return (
     vehicle.x <= edgeMargin ||
-    vehicle.y <= edgeMargin ||
+    vehicle.y <= (vehicle.routeId === 'north-estate-to-west-south-avenue' ? WORLD_MIN_Y + edgeMargin : edgeMargin) ||
     vehicle.x >= WORLD_WIDTH - edgeMargin ||
     vehicle.y >= WORLD_HEIGHT - edgeMargin
   );
@@ -2884,12 +2878,12 @@ function currentVehicleOverlapsTowCorridor({
   );
   const minimumRow = clamp(
     Math.floor(bounds.y / GRID_SIZE),
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
   const maximumRow = clamp(
     Math.floor((bounds.y + bounds.height) / GRID_SIZE),
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
 
@@ -2954,12 +2948,12 @@ function positionOverlapsTowReservation({
   );
   const minimumRow = clamp(
     Math.floor(bounds.y / GRID_SIZE),
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
   const maximumRow = clamp(
     Math.floor((bounds.y + bounds.height) / GRID_SIZE),
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
 
@@ -3077,13 +3071,13 @@ function positionOverlapsPrivateMergeReservation({
   );
   const minimumRow = clamp(
     Math.floor(bounds.y / GRID_SIZE) - paddingInTiles,
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
   const maximumRow = clamp(
     Math.floor((bounds.y + bounds.height) / GRID_SIZE) +
       paddingInTiles,
-    0,
+    Math.floor(WORLD_MIN_Y / GRID_SIZE),
     Math.ceil(WORLD_HEIGHT / GRID_SIZE) - 1,
   );
 

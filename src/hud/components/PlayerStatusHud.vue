@@ -1,56 +1,46 @@
 <script setup>
-defineProps({
-  health: {
-    type: Number,
-    required: true,
-  },
-  energy: {
-    type: Number,
-    required: true,
-  },
+import { computed, ref, useId } from "vue";
+const props = defineProps({
+  intoxication: {type:Number,default:0},
+  health: { type: Number, required: true },
+  energy: { type: Number, required: true },
   fuel: { type: Number, required: true },
   damage: { type: Number, required: true },
-  showEnergy: {
-    type: Boolean,
-    default: true,
-  },
+  showEnergy: { type: Boolean, default: true },
 });
+const expanded = ref(false);
+const panelId = useId();
+const clampPercent = value => Math.max(0, Math.min(100, Number(value) || 0));
+const bars = computed(() => [
+  { id: "health", label: "Health", value: clampPercent(props.health), icon: "fa-heart", bad: props.health <= 20 },
+  { id: "energy", label: "Energy", value: clampPercent(props.energy), icon: "fa-bolt", bad: props.energy <= 20 },
+  { id: "fuel", label: "Fuel", value: clampPercent(props.fuel), icon: "fa-gas-pump", bad: props.fuel <= 20 },
+  { id: "damage", label: "Damage", value: clampPercent(props.damage), icon: "fa-car-burst", bad: props.damage >= 70 },
+]);
+const badCount = computed(() => bars.value.filter(bar => bar.bad).length);
+const mood = computed(() => props.intoxication >= 30 ? "🥴" : ["😄", "🙂", "😐", "🙁", "😠"][badCount.value]);
+const summary = computed(() => props.intoxication >= 30 ? "Intoxication: " + Math.round(props.intoxication) + "%" : badCount.value ? badCount.value + " of 4 indicators need attention" : "All four indicators are good");
 </script>
-
 <template>
-  <aside class="player-status" aria-label="Health, energy, fuel and damage">
-    <div class="player-status__row player-status__row--health">
-      <i class="fa-solid fa-heart" aria-hidden="true" />
-      <span>
-        <small>HEALTH</small>
-        <b>{{ Math.round(health) }}</b>
-      </span>
-      <div><i :style="{ width: `${health}%` }" /></div>
-    </div>
-
-    <div
-      v-if="showEnergy"
-      class="player-status__row player-status__row--energy"
-    >
-      <i class="fa-solid fa-bolt" aria-hidden="true" />
-      <span>
-        <small>ENERGY</small>
-        <b>{{ Math.round(energy) }}</b>
-      </span>
-      <div><i :style="{ width: `${energy}%` }" /></div>
-    </div>
-
-    <div v-for="bar in [{ id: 'fuel', label: 'Fuel', value: fuel, icon: 'fa-gas-pump' }, { id: 'damage', label: 'Damage', value: damage, icon: 'fa-car-burst' }]"
-      :key="bar.id" class="player-status__row" :class="'player-status__row--' + bar.id" :title="bar.label + ': ' + Math.round(bar.value) + '%'">
-      <i class="fa-solid" :class="bar.icon" aria-hidden="true" />
-      <span><small>{{ bar.label }}</small><b>{{ Math.round(bar.value) }}</b></span>
-      <div role="meter" :aria-label="bar.label" :aria-valuenow="Math.max(0, Math.min(100, bar.value))" aria-valuemin="0" aria-valuemax="100">
-        <i :style="{ width: Math.max(0, Math.min(100, bar.value)) + '%' }" />
+  <aside class="player-status" :class="{ 'player-status--collapsed': !expanded }" aria-label="Player status">
+    <button class="player-status__toggle" type="button" :aria-expanded="expanded" :aria-controls="panelId"
+      :aria-label="(expanded ? 'Hide status bars. ' : 'Show status bars. ') + summary"
+      :title="summary" @click="expanded = !expanded">
+      <span aria-hidden="true">{{ mood }}</span>
+    </button>
+    <div v-if="expanded" :id="panelId" class="player-status__bars">
+      <small v-if="intoxication > 0">🥴 Intoxication {{Math.ceil(intoxication)}}%</small>
+      <div v-for="bar in bars.filter(item => item.id !== 'energy' || showEnergy)" :key="bar.id" class="player-status__row" :class="'player-status__row--' + bar.id"
+        :title="bar.label + ': ' + Math.round(bar.value) + '%'">
+        <i class="fa-solid" :class="bar.icon" aria-hidden="true" />
+        <span><small>{{ bar.label }}</small><b>{{ Math.round(bar.value) }}</b></span>
+        <div role="meter" :aria-label="bar.label" :aria-valuenow="bar.value" aria-valuemin="0" aria-valuemax="100">
+          <i :style="{ width: bar.value + '%' }" />
+        </div>
       </div>
     </div>
   </aside>
 </template>
-
 <style scoped>
 .player-status {
   position: absolute;
@@ -91,7 +81,7 @@ defineProps({
   text-align: center;
   place-items: center;
   clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-  filter: drop-shadow(0 0 1px #b8ad91);
+  filter: none;
 }
 
 .player-status__row > i::before {
@@ -120,7 +110,7 @@ defineProps({
   border: 2px solid #8c8470;
   border-radius: 2px;
   background: #24211b;
-  box-shadow: inset 0 1px 4px #000;
+  box-shadow: none;
 }
 
 .player-status__row > div > i {
@@ -141,11 +131,7 @@ defineProps({
   clip-path: none;
   font-size: 23px;
   filter:
-    drop-shadow(1px 0 0 #17213a)
-    drop-shadow(-1px 0 0 #17213a)
-    drop-shadow(0 1px 0 #17213a)
-    drop-shadow(0 -1px 0 #17213a)
-    drop-shadow(2px 2px 0 #17213a);
+    none;
 }
 
 .player-status__row--health > div > i {
@@ -163,15 +149,16 @@ defineProps({
   clip-path: none;
   font-size: 23px;
   filter:
-    drop-shadow(1px 0 0 #17213a)
-    drop-shadow(-1px 0 0 #17213a)
-    drop-shadow(0 1px 0 #17213a)
-    drop-shadow(0 -1px 0 #17213a)
-    drop-shadow(2px 2px 0 #17213a);
+    none;
 }
 
 .player-status__row--energy > div > i {
   background: repeating-linear-gradient(135deg, #78a52c 0 9px, #9fc644 9px 17px);
 }
 
+.player-status { pointer-events:auto; }
+.player-status__toggle { display:grid; place-items:center; width:48px; height:48px; padding:0; border:1px solid rgb(23 33 58 / 12%); border-radius:50%; background:#fffdf4; cursor:pointer; }
+.player-status__toggle > span { font-family:"Apple Color Emoji", "Segoe UI Emoji", sans-serif; font-size:32px; line-height:1; }
+.player-status__bars { display:grid; gap:6px; }
+.player-status.player-status--collapsed { width:auto !important; padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; clip-path:none !important; }
 </style>

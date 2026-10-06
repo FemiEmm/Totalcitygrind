@@ -32,7 +32,7 @@ const canBuy = computed(() =>
   selected.value &&
   !owned.value &&
   requirementMet.value &&
-  !props.propertyState.mortgage &&
+  (paymentMethod.value !== "mortgage" || !props.propertyState.mortgage) &&
   props.money >= priceNow.value,
 );
 
@@ -154,7 +154,7 @@ const formatMoney = (value) => `₦${Number(value || 0).toLocaleString()}`;
   border-radius: 4px;
   color: #eee9d7;
   background: #282720;
-  box-shadow: 0 18px 45px #000b;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 .estate::before {
   content: "";
@@ -181,7 +181,7 @@ header span { color: #d9ca92; font-size: 12px; letter-spacing: .14em; }
 header h2 { margin: 5px 0; font-size: 30px; }
 header p { margin: 0; color: #aaa38d; }
 .estate__mortgage { margin-top: 7px; color: #e4cf76; }
-.estate__tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 14px; }
+.estate__tabs { position: relative; display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); max-height:180px; overflow-y:auto; gap: 8px; padding: 14px; }
 .estate__tabs button { padding: 13px; border: 1px solid #625c4b; color: #ccc5ae; background: #343229; text-align: left; font: inherit; }
 .estate__tabs button.active { border-color: #d7c783; color: #fff; background: #474334; }
 .estate__tabs small { display: block; color: #a69d80; font-size: 10px; }

@@ -1,3 +1,4 @@
+import { PLAYER_DANFO } from '../../player/data/playerDanfo.js';
 import { PRIVATE_CITIZEN_1_VEHICLE_TYPE } from "../../traffic/privatecitizen1/data/privateCitizen1Vehicle.js";
 import brtSpriteUrl from "../../assets/population/brt.png";
 import petrolTruckSpriteUrl from "../../assets/population/petrol-truck-cartoon.png";
@@ -108,10 +109,10 @@ export const POPULATION_VEHICLE_TYPES = Object.freeze([
     label: "Danfo",
     width: 40,
     length: 70,
-    renderWidth: 44,
-    renderLength: 77,
+    renderWidth: PLAYER_DANFO.width * PLAYER_DANFO.spriteRenderScale,
+    renderLength: PLAYER_DANFO.length * PLAYER_DANFO.spriteRenderScale,
     spriteUrl: playerDanfoSpriteUrl,
-    spriteCrop: Object.freeze({ x: 10, y: 10, width: 219, height: 452 }),
+    spriteCrop: PLAYER_DANFO.spriteCrop,
     colour: "#e6b83f",
     outlineColour: "#4c3910",
     frontMarkerColour: "#ffffff",

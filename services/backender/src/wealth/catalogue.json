@@ -1,0 +1,45 @@
+{
+  "properties": {
+    "mainland-home": 5000000,
+    "wealthy-estate-home": 10000000,
+    "alimosho-home-1": 5000000,
+    "alimosho-home-2": 5000000,
+    "alimosho-home-3": 5000000,
+    "alimosho-home-4": 5000000,
+    "alimosho-home-5": 5000000,
+    "alimosho-home-6": 5000000,
+    "alimosho-home-7": 5000000,
+    "alimosho-home-8": 5000000,
+    "alimosho-home-9": 5000000,
+    "alimosho-home-10": 5000000,
+    "alimosho-home-11": 5000000,
+    "alimosho-home-12": 5000000,
+    "alimosho-home-13": 5000000
+  },
+  "vehicles": {
+    "eko-compact": 120000,
+    "mainland-hatch": 185000,
+    "lagoon-sedan": 295000,
+    "island-cruiser": 475000,
+    "victoria-executive": 780000
+  },
+  "businessOffice": 1000000,
+  "businesses": {
+    "fleet-danfo": {
+      "price": 450000,
+      "max": 10
+    },
+    "lease-car": {
+      "price": 300000,
+      "max": 10
+    }
+  },
+  "stocks": {
+    "kilobeat": 820,
+    "technopack": 1260,
+    "seventomi": 1940,
+    "cquence": 690,
+    "megapay": 1520,
+    "gidi": 1100
+  }
+}

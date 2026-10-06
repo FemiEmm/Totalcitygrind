@@ -1,4 +1,6 @@
 <script setup>
+import { LOCAL_STUDIO } from "./localStudio.js";
+import { COAST_CITY_ENABLED, COAST_CITY_LOCK_MESSAGE } from "./worldAvailability.js";
 import {
   computed,
   nextTick,
@@ -9,8 +11,13 @@ import {
   watch,
 } from "vue";
 
+import { startNewPlayerInventory } from "../player/systems/playerInventory.js";
+import OnlinePanel from '../network/OnlinePanel.vue';
+import { connection, bootstrapAccount, gameRequest, uploadSave, connectWorld, disconnectWorld } from '../network/connection.js';
+import { setSaveAccount } from './saveSlots.js';
 import DailyQuestsModal from "./components/DailyQuestsModal.vue";
 import TouchControls from "./components/TouchControls.vue";
+import StartingHomePicker from "./components/StartingHomePicker.vue";
 import GameMenu from "./components/GameMenu.vue";
 import GameTour from "./components/GameTour.vue";
 
@@ -29,6 +36,92 @@ import {
   setActiveSaveSlotId,
 } from "./saveSlots.js";
 
+async function startLocalFilmingStudio() { return window.tcgStudioStart?.(); }
+const onlinePanelOpen = ref(false);
+const onlineMode = ref(false);
+const onlineBusy = ref(false);
+const unavailableHomes = ref([]);
+const onlineHomePrices = ref({});
+let accountReady = false;
+let pendingUpload = null;
+let uploadPromise = null;
+let uploadTimer = null;
+let autosaveTimer = null;
+let saveConflict = false;
+function queueAccountSave() {
+  if (!onlineMode.value || !accountReady || saveConflict) return;
+  pendingUpload = localStorage.getItem(getSaveStorageKey());
+  connection.save = 'Waiting to sync';
+  clearTimeout(uploadTimer);
+  uploadTimer = setTimeout(() => { void flushAccountSave(); }, 1200);
+}
+async function flushAccountSave() {
+  clearTimeout(uploadTimer);
+  if (uploadPromise) { await uploadPromise; if (pendingUpload) return flushAccountSave(); return; }
+  if (!pendingUpload || !onlineMode.value || saveConflict) return;
+  const raw = pendingUpload; pendingUpload = null;
+  uploadPromise = uploadSave(JSON.parse(raw)).catch(error => {
+    if (error.status === 409) { saveConflict = true; pendingUpload = null; }
+    connection.error = error.message;
+  });
+  await uploadPromise; uploadPromise = null;
+  if (pendingUpload) return flushAccountSave();
+}
+const ONLINE_LOAD_ERROR = "Oh oh... Total City Grind is having issues. Relax, we’ll be back up soon.";
+async function enterOnlineCity() {
+  if (onlineBusy.value) return;
+  onlineBusy.value = true; connection.error = '';
+  accountReady = false; pendingUpload = null; clearTimeout(uploadTimer);
+  let cachedSaveKey = null, previousCachedSave = null;
+  try {
+    const data = await bootstrapAccount();
+    worldStarted.value = false;
+    await nextTick();
+    setSaveAccount(connection.user.id); setActiveSaveSlotId(1); activeSaveSlot.value = 1;
+    onlineMode.value = true; accountReady = false; saveConflict = false; pendingUpload = null;
+    unavailableHomes.value = data.homes.filter(home => !home.available).map(home => home.id); onlineHomePrices.value=Object.fromEntries(data.homes.map(home=>[home.id,home.weeklyRent]));
+    if (data.save) {
+      const snapshot = data.save.snapshot;
+      if (snapshot?.version !== 1 || !Number.isFinite(snapshot.player?.x) || !Number.isFinite(snapshot.player?.y) || !Number.isFinite(snapshot.player?.rotation)) throw new Error('Invalid online save position');
+      cachedSaveKey = getSaveStorageKey(1);
+      previousCachedSave = localStorage.getItem(cachedSaveKey);
+      localStorage.setItem(cachedSaveKey, JSON.stringify(snapshot));
+      accountReady = await loadGame(1) === true;
+      if (!accountReady) throw new Error('Could not load your account game. Please try again.');
+    } else if (data.home && data.firstGamePending === true) {
+      // Only a confirmed, unfinished first reservation can create its initial save.
+      // Existing or invalid saves always take the restoration/error path above.
+      cachedSaveKey = getSaveStorageKey(1);
+      previousCachedSave = localStorage.getItem(cachedSaveKey);
+      await startNewGameAtHome(1, { homeId: data.home.homeId, playerName: data.profile.display_name, onlineTenancy: data.home });
+      if (screen.value !== 'playing') throw new Error('First home setup did not finish');
+      accountReady = true;
+      queueAccountSave();
+    } else if (data.home) {
+      throw new Error('Existing online home has no saved game');
+    } else { playGame(1); }
+    onlinePanelOpen.value = false;
+  } catch (error) {
+    accountReady = false; pendingUpload = null; clearTimeout(uploadTimer);
+    worldStarted.value = false; screen.value = 'title'; tourVisible.value = false;
+    if (cachedSaveKey) {
+      try {
+        if (previousCachedSave === null) localStorage.removeItem(cachedSaveKey);
+        else localStorage.setItem(cachedSaveKey, previousCachedSave);
+      } catch { /* Never upload a failed restoration. */ }
+    }
+    leaveOnlineAccount();
+    enterMainMenuMusic();
+    connection.error = ONLINE_LOAD_ERROR;
+    onlinePanelOpen.value = true;
+    console.error('Online game could not be loaded', error);
+  }
+  finally { onlineBusy.value = false; }
+}
+function leaveOnlineAccount() {
+  disconnectWorld(); accountReady = false; onlineMode.value = false; pendingUpload = null;
+  setSaveAccount(null); refreshSaveSlots();
+}
 const TOUR_STORAGE_KEY = "total-city-grind-tour-v2";
 const WorldMap = shallowRef(null);
 const WorldMap2 = shallowRef(null);
@@ -81,7 +174,7 @@ let saveNoticeTimer = null;
 let openingTimer = null;
 let pausedByVisibility = false;
 const worldPaused = computed(
-  () => screen.value !== "playing" || tourVisible.value || portrait.value || worldLoading.value || questsOpen.value,
+  () => onlinePanelOpen.value || screen.value !== "playing" || tourVisible.value || portrait.value || worldLoading.value || questsOpen.value,
 );
 
 watch(
@@ -99,6 +192,7 @@ const activeWorldReference = computed(() =>
 );
 
 function deleteSavedGame(slotId) {
+  if (onlineMode.value) { saveNotice.value = "Online homes and account saves cannot be deleted from local slots."; return; }
   try {
     clearSaveSlot(slotId);
     if (worldStarted.value && slotId === activeSaveSlot.value) {
@@ -123,16 +217,60 @@ function refreshSaveSlots() {
   saveSlots.value = getSaveSlots();
 }
 
-async function playGame(slotId = activeSaveSlot.value) {
-  if (!await prepareWorld()) return;
+const pendingNewGameSlot = ref(null);
+const startingHomeBusy = ref(false);
+const startingHomeError = ref('');
+function playGame(slotId = activeSaveSlot.value) {
+  if (onlineMode.value && accountReady) { saveNotice.value = "Return to the main menu to change accounts."; return; }
+  pendingNewGameSlot.value = slotId;
+  startingHomeError.value = '';
+  tourVisible.value = false;
+  screen.value = 'choose-home';
+}
+function cancelStartingHome() {
+  if (startingHomeBusy.value) return;
+  pendingNewGameSlot.value = null;
+  screen.value = 'title';
+  if (onlineMode.value) leaveOnlineAccount();
+}
+async function confirmStartingHome(selection) {
+  if (startingHomeBusy.value) return;
+  startingHomeBusy.value = true;
+  try {
+    if (onlineMode.value) {
+      // Load assets before reserving; a retry returns the same tenancy without charging twice.
+      if (!await prepareWorld()) throw new Error('Could not load the city.');
+      selection.onlineTenancy = await gameRequest('claim', { homeId: selection.homeId });
+      connection.home = selection.onlineTenancy;
+      selection.playerName = connection.user.user_metadata?.display_name || selection.playerName;
+    }
+    await startNewGameAtHome(pendingNewGameSlot.value ?? activeSaveSlot.value, selection);
+    if (onlineMode.value && screen.value === 'playing') { accountReady = true; queueAccountSave(); }
+  }
+  catch (error) {
+    startingHomeError.value = error.message || 'Could not prepare your home. Please try again.';
+    if (onlineMode.value && [400,409].includes(error.status)) {
+      try { const data = await gameRequest('bootstrap'); unavailableHomes.value = data.homes.filter(home => !home.available).map(home => home.id); onlineHomePrices.value=Object.fromEntries(data.homes.map(home=>[home.id,home.weeklyRent])); } catch { /* Keep the original reservation error. */ }
+    }
+  }
+  finally { startingHomeBusy.value = false; }
+}
+async function startNewGameAtHome(slotId, selection) {
+  if (!await prepareWorld()) { startingHomeError.value = "Could not load the city. Please try again."; return; }
   worldStarted.value = true;
   activeSaveSlot.value = setActiveSaveSlotId(slotId);
   clearSaveSlot(activeSaveSlot.value);
+  startNewPlayerInventory();
   activeWorld.value = "mainland";
   world2VehicleSnapshot.value = null;
   world2RaceRequested.value = false;
   worldInstanceKey.value += 1;
   await nextTick();
+  if (!worldMapReference.value?.beginNewGame?.(selection)) {
+    worldStarted.value = false;
+    throw new Error('Could not finish setting up your home. Please retry the same room.');
+  }
+  pendingNewGameSlot.value = null;
   leaveMainMenuMusic();
   screen.value = "playing";
   tourVisible.value =
@@ -140,6 +278,16 @@ async function playGame(slotId = activeSaveSlot.value) {
 }
 
 async function loadGame(slotId = activeSaveSlot.value) {
+  if (!COAST_CITY_ENABLED) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(getSaveStorageKey(slotId)) || 'null');
+      if (saved?.currentMapId === 'coastal-city') {
+        saveNotice.value = COAST_CITY_LOCK_MESSAGE + '. Your coastal save is preserved.';
+        return;
+      }
+    } catch { /* Existing load handling will report invalid saves. */ }
+  }
+  if (onlineMode.value && slotId !== 1) { saveNotice.value = "Online accounts use one shared save."; return; }
   if (!await prepareWorld()) return;
   worldStarted.value = true;
   activeSaveSlot.value = setActiveSaveSlotId(slotId);
@@ -149,7 +297,8 @@ async function loadGame(slotId = activeSaveSlot.value) {
   worldInstanceKey.value += 1;
   await nextTick();
   leaveMainMenuMusic();
-  worldMapReference.value?.loadGame?.();
+  const restored = worldMapReference.value?.loadGame?.();
+  if (onlineMode.value && restored !== true) throw new Error('Online save restoration failed');
   try {
     const save = JSON.parse(
       window.localStorage.getItem(getSaveStorageKey()) || "{}",
@@ -177,6 +326,7 @@ async function loadGame(slotId = activeSaveSlot.value) {
     activeWorld.value = "mainland";
   }
   screen.value = "playing";
+  return true;
 }
 
 function pauseGame() {
@@ -190,7 +340,14 @@ function resumeGame() {
   screen.value = "playing";
 }
 
-function returnToTitle() {
+async function returnToTitle() {
+  if (onlineMode.value) {
+    activeWorldReference.value?.saveGame?.();
+    await flushAccountSave();
+    worldStarted.value = false;
+    await nextTick();
+    leaveOnlineAccount();
+  }
   tourVisible.value = false;
   refreshSaveSlots();
   screen.value = "title";
@@ -213,6 +370,7 @@ function saveGame() {
 }
 
 async function enterWorld2(payload = {}) {
+  if (!COAST_CITY_ENABLED) { saveNotice.value = COAST_CITY_LOCK_MESSAGE; return; }
   if (!await prepareWorld(true)) return;
   // Persist the paused mainland exactly where the player left it. World 2
   // adds its own position to this save instead of replacing Lagos state.
@@ -263,6 +421,11 @@ function handleMenuKey(event) {
   }
 }
 
+function handleAppBackground() {
+  if (onlineMode.value && accountReady) { activeWorldReference.value?.saveGame?.(); void flushAccountSave(); }
+  if (screen.value === "playing") pauseGame();
+}
+
 function handleVisibilityChange() {
   if (document.hidden && screen.value === "playing") {
     pausedByVisibility = true;
@@ -275,10 +438,39 @@ function handleVisibilityChange() {
   }
 }
 
+watch(() => onlineMode.value && worldStarted.value && activeWorld.value === 'mainland' && (screen.value === 'playing' || screen.value === 'paused'), enabled => {
+  if (enabled) connectWorld(() => worldMapReference.value?.getNetworkPose?.(), async () => {
+    if (accountReady) { activeWorldReference.value?.saveGame?.(); await flushAccountSave(); }
+  });
+  else disconnectWorld();
+}, { flush: 'post' });
+
+function reconnectAfterPoliceTransfer() {
+  if (onlineMode.value && activeWorld.value === 'mainland') connectWorld(() => worldMapReference.value?.getNetworkPose?.());
+}
 onMounted(() => {
+  if (LOCAL_STUDIO) {
+    window.tcgStudioStart = async () => {
+      if (onlineMode.value) throw new Error('Studio requires offline play.');
+      if (!worldStarted.value) await startNewGameAtHome(1, { homeId: 'single-room-row-a-room-1', playerName: 'The City Grind' });
+      tourVisible.value = false;
+      openingVisible.value = false;
+      screen.value = 'playing';
+      return true;
+    };
+    window.tcgStudioResume = () => { tourVisible.value = false; screen.value = 'playing'; };
+  }
+
+  window.addEventListener('tcg:police-teleport', reconnectAfterPoliceTransfer);
+  window.addEventListener('tcg:game-saved', queueAccountSave);
+  autosaveTimer = setInterval(() => {
+    if (onlineMode.value && accountReady && worldStarted.value && !document.hidden) activeWorldReference.value?.saveGame?.();
+  }, 30000);
   portraitQuery.addEventListener("change", updateViewport);
   touchQuery.addEventListener("change", updateViewport);
   window.addEventListener("keydown", handleMenuKey);
+  window.addEventListener("pagehide", handleAppBackground);
+  window.addEventListener("blur", handleAppBackground);
   document.addEventListener(
     "visibilitychange",
     handleVisibilityChange,
@@ -291,9 +483,15 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (LOCAL_STUDIO) { delete window.tcgStudioStart; delete window.tcgStudioResume; }
+  window.removeEventListener('tcg:police-teleport', reconnectAfterPoliceTransfer);
+  window.removeEventListener('tcg:game-saved', queueAccountSave);
+  clearInterval(autosaveTimer); clearTimeout(uploadTimer); disconnectWorld();
   portraitQuery.removeEventListener("change", updateViewport);
   touchQuery.removeEventListener("change", updateViewport);
   window.removeEventListener("keydown", handleMenuKey);
+  window.removeEventListener("pagehide", handleAppBackground);
+  window.removeEventListener("blur", handleAppBackground);
   document.removeEventListener(
     "visibilitychange",
     handleVisibilityChange,
@@ -305,6 +503,10 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="game">
+    <button v-if="LOCAL_STUDIO && !worldStarted" style="position:fixed;top:16px;left:16px;z-index:2147483647;background:#ffd43b;color:#17213a;padding:12px;border:0;border-radius:6px;font-weight:bold" @click="startLocalFilmingStudio">Start local filming studio</button>
+    <button v-if="screen === 'paused'" class="game__online" @click="onlinePanelOpen = true"><i class="fa-solid fa-globe" aria-hidden="true" /> Online city</button>
+    <OnlinePanel v-if="onlinePanelOpen" :active="onlineMode" :busy="onlineBusy" @close="onlinePanelOpen = false" @enter="enterOnlineCity" @logout="leaveOnlineAccount" />
+    <div v-if="onlineMode && screen === 'playing'" class="game__online-status">{{ connection.presence }} · {{ connection.save }}</div>
     <WorldMap
       v-if="worldStarted"
       :key="worldInstanceKey"
@@ -325,18 +527,20 @@ onBeforeUnmount(() => {
     />
 
     <div v-if="worldLoading" class="game__loading" role="status">Loading the city…</div>
-    <TouchControls v-if="!worldPaused" :steering-only="!touchDevice" :key="`${activeWorld}:${activeWorldReference?.transmission}`" :transmission="activeWorldReference?.transmission" @input="handleTouchInput" />
+    <TouchControls v-if="!worldPaused" :ignition-only="!touchDevice" :key="`${activeWorld}:${activeWorldReference?.transmission}`" :transmission="activeWorldReference?.transmission" @input="handleTouchInput" />
     <section v-if="portrait" class="game__rotate" role="status" aria-live="polite">
       <i class="fa-solid fa-mobile-screen-button" aria-hidden="true" />
       <h1>Turn your phone sideways</h1>
       <p>Total City Grind plays in landscape.<br />Rotate your phone to get back on the road.</p>
     </section>
+    <StartingHomePicker :prices="onlineMode ? onlineHomePrices : {}" v-if="screen === 'choose-home'" :busy="startingHomeBusy" :error="startingHomeError" :unavailable="onlineMode ? unavailableHomes : []" :initial-name="onlineMode ? connection.user?.user_metadata?.display_name || '' : ''" @choose="confirmStartingHome" @cancel="cancelStartingHome" />
     <GameMenu
-      v-if="screen !== 'playing'"
+      v-if="screen !== 'playing' && screen !== 'choose-home'"
       :mode="screen"
       :save-slots="saveSlots"
       :active-save-slot="activeSaveSlot"
       @play="playGame"
+      @play-online="onlinePanelOpen = true"
       @load="loadGame"
       @resume="resumeGame"
       @return-to-title="returnToTitle"
@@ -391,9 +595,11 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.game__toolbar { position:absolute; z-index:24000; top:max(8px, env(safe-area-inset-top)); left:238px; display:flex; gap:8px; }
+.game__online { position:absolute; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:25000; background:#ffdb3b; color:#17213a; border:0; border-radius:12px; padding:10px 18px; min-height:42px; font:inherit; cursor:pointer; }
+.game__online-status { position:absolute; bottom:4px; left:8px; max-width:45%; font-size:10px; color:white; background:#17213adb; border-radius:5px; padding:3px 6px; z-index:24001; pointer-events:none; }
+.game__toolbar { position:absolute; z-index:24000; top:max(8px, env(safe-area-inset-top)); left:auto; right:max(16px, env(safe-area-inset-right)); display:flex; gap:8px; }
 .game__toolbar .game__pause { position:static; width:44px; height:44px; }
-.game__quests { display:grid; place-items:center; width:44px; height:44px; padding:0; border:3px solid #17213a; border-radius:11px; color:#17213a; background:#ffd43b; font-weight:bold; cursor:pointer; box-shadow:var(--comic-shadow-small); }
+.game__quests { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgb(23 33 58 / 16%); border-radius:11px; color:#17213a; background:#ffd43b; font-weight:bold; cursor:pointer; box-shadow:var(--comic-shadow-small); }
 .game__quests[aria-expanded="true"] { background:#65d6ee; }
 
 .game__loading { position:absolute; inset:0; z-index:22000; display:grid; place-items:center; background:#17213a; color:#ffd43b; font-size:24px; }
@@ -429,7 +635,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.32em;
-  text-shadow: 0 2px 5px #000;
+  text-shadow: none;
   animation: opening-pulse 900ms ease-in-out infinite alternate;
 }
 

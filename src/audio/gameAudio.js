@@ -1,3 +1,4 @@
+import { createManagedAudio, audioGeneration, isAudioBlocked } from "./audioLifecycle.js";
 const AUDIO_SETTINGS_STORAGE_KEY =
   "lagos-experience-audio-settings";
 const MAXIMUM_OUTPUT_VOLUME = 0.72;
@@ -73,7 +74,7 @@ function getAudioSettings() {
 export function playGameSound(soundId, options = {}) {
   const sound = GAME_SOUNDS[soundId];
 
-  if (!sound || typeof Audio === "undefined") {
+  if (!sound || typeof Audio === "undefined" || isAudioBlocked()) {
     return null;
   }
 
@@ -96,7 +97,7 @@ export function playGameSound(soundId, options = {}) {
   soundCooldowns.set(soundId, currentTime);
 
   const settings = getAudioSettings();
-  const audio = new Audio(sound.source);
+  const audio = createManagedAudio(sound.source);
   audio.loop = options.loop ?? sound.loop ?? false;
   audio.lagosBaseVolume = options.volume ?? sound.volume;
   audio.volume = settings.muted
@@ -117,9 +118,10 @@ export function playGameSoundSequence(
     return;
   }
 
+  const generation = audioGeneration();
   soundIds.forEach((soundId, index) => {
     window.setTimeout(() => {
-      playGameSound(soundId, { loop: false });
+      if (generation === audioGeneration()) playGameSound(soundId, { loop: false });
     }, index * gapMilliseconds);
   });
 }

@@ -1,3 +1,6 @@
+import { addWorkplaceParking, workplaceParkingClearances } from './workplaceParking.js';
+import { schoolCampus, lastmaCompound, lawmaCompound, governorCompound, LASTMA_NORTH_EDGE_OPENING } from './civicSites.js';
+import { POLICE_LOTS, POLICE_OBSTACLES } from '../../police/policeSystem.js';
 ﻿import {
   GRID_SIZE,
   WORLD_HEIGHT,
@@ -16,6 +19,7 @@ import {
 } from "../../population/data/trafficLights.js";
 
 import { nightlife } from "./nightlife.js";
+import { northernResidential } from "./northernResidential.js";
 import { startingResidential } from "./startingResidential.js";
 import { wealthyResidential } from "./wealthyResidential.js";
 import { workHub } from "./workHub.js";
@@ -51,7 +55,7 @@ function getEdgeTileFromPoint(point) {
   if (point.y < 0) {
     return {
       x: Math.floor(point.x / GRID_SIZE) * GRID_SIZE,
-      y: -GRID_SIZE,
+      y: point.y < WORLD_MIN_Y ? WORLD_MIN_Y : -GRID_SIZE,
     };
   }
 
@@ -148,6 +152,11 @@ for (
 export const edgeBorderTiles = Object.freeze(
   edgeTileCandidates
     .filter((tile) => {
+      if (tile.y === -GRID_SIZE && tile.x >= 46*GRID_SIZE && tile.x < 48*GRID_SIZE) return false;
+      if (tile.y === -GRID_SIZE && tile.x >= 54*GRID_SIZE && tile.x < 58*GRID_SIZE) return false;
+      // Keep both lanes open where the estate extension crosses the old north boundary.
+      if (tile.y === -GRID_SIZE && tile.x >= 24 * GRID_SIZE && tile.x < 26 * GRID_SIZE) return false;
+      if (tile.y === -GRID_SIZE && tile.x >= LASTMA_NORTH_EDGE_OPENING.firstColumn * GRID_SIZE && tile.x < LASTMA_NORTH_EDGE_OPENING.endColumn * GRID_SIZE) return false;
       return !edgeSpawnGateMap.has(`${tile.x}:${tile.y}`);
     })
     .map((tile, index) => ({
@@ -163,10 +172,17 @@ export const edgeBorderTiles = Object.freeze(
 
 export const districts = [
   startingResidential,
+  northernResidential,
   workHub,
   wealthyResidential,
   nightlife,
+  schoolCampus,
+  lastmaCompound,
+  lawmaCompound,
+  governorCompound,
 ];
+
+addWorkplaceParking(districts);
 
 function moveItemIntoWorld(district, item) {
   return {
@@ -379,7 +395,12 @@ const policeParkingReservations = districts.flatMap((district) => {
 });
 
 
+export const publicParkingZones = districts.flatMap(district =>
+  (district.publicParkingZones ?? []).map(zone => moveItemIntoWorld(district, zone)));
+
 const buildingReservations = [
+  ...publicParkingZones,
+  ...POLICE_LOTS,
   ...roads,
   ...landmarkReservations,
   ...busStopReservations,
@@ -392,6 +413,7 @@ const buildingReservations = [
 const BUILDING_SETBACK = 10;
 
 function addPedestrianSetback(building) {
+  if (building.singleRoomRow) return { ...building, pedestrianSetback: 0 };
   const inset = Math.min(
     BUILDING_SETBACK,
     Math.max(0, (building.width - GRID_SIZE * 0.6) / 2),
@@ -420,6 +442,8 @@ export const genericBuildings = districts.flatMap((district) => {
       isLandmark: false,
     });
 
+    // Remove the entire decorative footprint for new courts; never crop a house to fit a bay.
+    if (workplaceParkingClearances.some(plot => rectanglesOverlap(worldBlock, plot))) return [];
     const pieces = buildingReservations.reduce(
       (remaining, reserved) => {
         return remaining.flatMap((piece) => {
@@ -454,7 +478,7 @@ export const landmarks = districts.flatMap((district) => {
         ...landmark,
         blocksVehicles: true,
         isLandmark: true,
-        spriteUrl: LANDMARK_ASSETS[landmark.id] ?? null,
+        spriteUrl: landmark.spriteUrl ?? LANDMARK_ASSETS[landmark.id] ?? null,
       });
     });
 });
@@ -465,6 +489,7 @@ export const buildings = [
 ];
 
 export const obstacles = [
+  ...POLICE_OBSTACLES,
   ...buildings,
   ...barriers,
   ...trafficLightCollisionPads,

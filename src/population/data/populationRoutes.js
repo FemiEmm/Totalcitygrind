@@ -1,5 +1,5 @@
 import { PRIVATE_CITIZEN_1_ROUTE } from "../../traffic/privatecitizen1/data/privateCitizen1Route.js";
-import { GRID_SIZE } from "../../world/data/mapConstants.js";
+import { GRID_SIZE, NORTHERN_ESTATE_SPAWN_ROW } from "../../world/data/mapConstants.js";
 
 const EAST = "east";
 const WEST = "west";
@@ -56,12 +56,7 @@ function fourLaneHighway(
   });
 }
 
-function oneLaneHorizontal(column, roadRow, direction, metadata = {}) {
-  return point(column, roadRow + 0.5, {
-    direction,
-    ...metadata,
-  });
-}
+
 
 function oneLaneVertical(roadColumn, row, direction, metadata = {}) {
   return point(roadColumn + 0.5, row, {
@@ -218,7 +213,9 @@ export const POPULATION_ROUTES = Object.freeze([
   route(
     "north-estate-to-west-south-avenue",
     [
-      twoLaneVertical(24, EDGE_START, SOUTH),
+      twoLaneVertical(24, NORTHERN_ESTATE_SPAWN_ROW, SOUTH),
+      twoLaneVertical(24, -66, SOUTH),
+      twoLaneVertical(24, -5, SOUTH),
       twoLaneVertical(24, 5.6, SOUTH),
       twoLaneVertical(24, 8, SOUTH),
       twoLaneVertical(24, 21.6, SOUTH),

@@ -130,7 +130,7 @@ const passengerSeats = computed(() =>
     linear-gradient(90deg, rgb(255 255 255 / 3%), transparent 20% 80%, rgb(255 255 255 / 3%)),
     #1b1b17;
   gap: 5px;
-  box-shadow: inset 0 0 9px #090907;
+  box-shadow: none;
 }
 
 .occupancy-hud__windshield {
@@ -148,7 +148,7 @@ const passengerSeats = computed(() =>
   border-radius: 2px;
   background:
     linear-gradient(180deg, #3c3931 0 68%, #211f1a 69%);
-  box-shadow: inset 0 1px rgb(255 255 255 / 7%);
+  box-shadow: none;
 }
 
 .occupancy-hud__seat--occupied {

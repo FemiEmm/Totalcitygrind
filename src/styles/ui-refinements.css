@@ -1,0 +1,9 @@
+/* Shared readable labels; controls with fixed hit areas keep their own sizing. */
+.game button, .game-phone__screen-modal button { white-space:normal; overflow-wrap:anywhere; }
+.game button :is(span, strong, small, b), .game-phone__screen-modal button :is(span, strong, small, b) { min-width:0; max-width:100%; }
+.game .game-menu__action, .game .game-menu__setting-button { grid-template-columns:28px minmax(0,1fr) 18px; height:auto; }
+.game .game-menu__action :is(strong,small), .game .game-menu__setting-button :is(strong,small) { white-space:normal; line-height:1.25; }
+.game .game-phone__job-card, .game .game-phone__route, .game .game-phone__contact, .game .game-phone__music-list > button, .game .game-phone__debugger > button { height:auto; min-height:44px; }
+.game .game-phone__job-card > span, .game .game-phone__route > span, .game .game-phone__contact > span { min-width:0; }
+.game .touch-controls button > span { overflow-wrap:normal; word-break:normal; }
+.game button:focus-visible, .game-phone__screen-modal button:focus-visible { outline:3px solid #2f7cf4; outline-offset:3px; }

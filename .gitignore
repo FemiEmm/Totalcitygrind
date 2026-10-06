@@ -30,3 +30,20 @@ tmp/
 save-backups/
 save-recovery/
 .codex-patch-check
+
+# Local project snapshots
+/game-backups/
+
+# Credentials and local service state (all nested packages)
+.env
+.env.*
+!.env.example
+!.env.supabase.example
+!.env.render.example
+/services/*/data/
+/services/*/exports/
+/services/*/certs/
+*.pem
+*.key
+*.p12
+*.pfx

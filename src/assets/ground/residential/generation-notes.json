@@ -1,0 +1,19 @@
+{
+  "tool": "Built-in image_gen",
+  "use": "1x4 muddy ground beneath single-room houses",
+  "styleReference": "src/assets/roads/untarred-road-tile.png and src/assets/buildings/generic/single-room-row-1x4.png",
+  "prompts": [
+    {
+      "file": "muddy-ground-1x4-dry.png",
+      "prompt": "Use case: stylized-concept. Asset type: standalone top-down ground sprite for Total City Grind, a Nigerian driving game. Create ONE horizontal rectangular muddy earth foundation/yard strip for a 1x4 row of houses: exactly four times as wide as tall, four adjoining square tile footprints with no visible grid seams. Strict orthographic overhead camera, flat surface, no perspective, no raised slab or side faces. Detailed realistic hand-painted game terrain matching muted semi-realistic top-down buildings. Soil fills entire rectangular strip, clean mostly straight boundaries with tiny natural irregularities. Strip centered with minimal transparent padding, canvas wide landscape. Ground only: absolutely no houses, roofs, people, cars, road, text, labels, borders, grass clumps, icons or cast shadows. Genuine transparent background outside strip; ground itself opaque. Soft neutral lighting. Variant 1: warm reddish brown compacted muddy earth, mostly dry with fine irregular cracks, a few tiny embedded stones, lightly scuffed paths, subtle tonal variation, restrained texture."
+    },
+    {
+      "file": "muddy-ground-1x4-wet.png",
+      "prompt": "Use case: stylized-concept. Asset type: standalone top-down ground sprite for Total City Grind, a Nigerian driving game. Create ONE horizontal rectangular muddy earth foundation/yard strip for a 1x4 row of houses: exactly four times as wide as tall, four adjoining square tile footprints with no visible grid seams. Strict orthographic overhead camera, flat surface, no perspective, no raised slab or side faces. Detailed realistic hand-painted game terrain matching muted semi-realistic top-down buildings. Soil fills entire rectangular strip, clean mostly straight boundaries with tiny natural irregularities. Strip centered with minimal transparent padding, canvas wide landscape. Ground only: absolutely no houses, roofs, people, cars, road, text, labels, borders, grass clumps, icons or cast shadows. Genuine transparent background outside strip; ground itself opaque. Soft neutral lighting. Variant 2: dark earthy brown damp mud, a few small shallow muddy puddles and subtle moist patches, understated highlights, thin scuffs and tiny stones. Most area remains usable flat earth, not a pond."
+    },
+    {
+      "file": "muddy-ground-1x4-rutted.png",
+      "prompt": "Use case: stylized-concept. Asset type: standalone top-down ground sprite for Total City Grind, a Nigerian driving game. Create ONE horizontal rectangular muddy earth foundation/yard strip for a 1x4 row of houses: exactly four times as wide as tall, four adjoining square tile footprints with no visible grid seams. Strict orthographic overhead camera, flat surface, no perspective, no raised slab or side faces. Detailed realistic hand-painted game terrain matching muted semi-realistic top-down buildings. Soil fills entire rectangular strip, clean mostly straight boundaries with tiny natural irregularities. Strip centered with minimal transparent padding, canvas wide landscape. Ground only: absolutely no houses, roofs, people, cars, road, text, labels, borders, grass clumps, icons or cast shadows. Genuine transparent background outside strip; ground itself opaque. Soft neutral lighting. Variant 3: ochre brown worn mud, shallow interrupted parallel tyre impressions along the length, some darker damp patches and fine gravel, no deep trenches, restrained natural weathering."
+    }
+  ]
+}

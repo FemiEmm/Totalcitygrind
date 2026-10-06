@@ -1,3 +1,4 @@
+import { SERVICE_VEHICLES } from './serviceVehicles.js';
 import { PLAYER_DANFO } from "./playerDanfo.js";
 import { PLAYER_BRT } from "../../employment/data/brtEmployment.js";
 import ekoCompactSpriteUrl from "../../assets/vehicles/purchasable/sprites/eko-compact.png";
@@ -123,6 +124,7 @@ export function getPlayerVehicleConfig(vehicleId) {
   }
 
   return (
+    SERVICE_VEHICLES.find(vehicle => vehicle.id === vehicleId) ??
     PURCHASABLE_CARS.find((vehicle) => vehicle.id === vehicleId) ??
     PLAYER_DANFO
   );

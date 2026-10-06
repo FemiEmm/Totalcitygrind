@@ -11,8 +11,8 @@ import sisterPortrait from "../../assets/characters/sister.png";
 export const CHARACTER_DEFINITIONS = Object.freeze({
   mutiu: Object.freeze({
     id: "mutiu",
-    name: "Mutiu Illegal",
-    role: "Underground race organiser",
+    name: "Mr-Wire",
+    role: "Hustler",
     portraitUrl: mutiuPortrait,
   }),
   landlord: Object.freeze({

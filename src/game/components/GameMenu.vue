@@ -1,6 +1,8 @@
 <script setup>
-import { computed, ref, watch, nextTick } from "vue";
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { fullscreenActive, installed, displayNotice, installHelp, installing, appleDevice, toggleFullscreen, addToHomeScreen } from "../browserDisplay.js";
+import { getMenuStatistics } from "../../network/connection.js";
+import HowToPlay from "./HowToPlay.vue";
 import ToggleIcon from "../../ui/components/ToggleIcon.vue";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import menuBackgroundUrl from "../../assets/game/TCG_image.jpg";
@@ -10,7 +12,7 @@ import {
   setPlayerVehicleAudioSettings,
 } from "../../audio/vehicleAudio.js";
 import { playGameSound } from "../../audio/gameAudio.js";
-import { refreshMusicVolume } from "../../audio/musicPlayer.js";
+import { musicAudioSettings, setMusicSettings } from "../../audio/musicPlayer.js";
 import {
   hudPreferences,
   setHudPreference,
@@ -39,6 +41,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   "play",
+  "play-online",
   "load",
   "resume",
   "return-to-title",
@@ -48,6 +51,20 @@ const emit = defineEmits([
 ]);
 
 const activePanel = ref("menu");
+const music = ref(musicAudioSettings);
+function updateMusic(){music.value=setMusicSettings(music.value);}
+const statistics=ref({online:null,visits:null,users:null});
+let statsTimer;
+let statsLoading=false;
+async function refreshStatistics(){
+  if(props.mode==='paused'||document.hidden||statsLoading)return;
+  statsLoading=true;
+  try { statistics.value=await getMenuStatistics(); } finally {statsLoading=false;}
+}
+onMounted(()=>{refreshStatistics();statsTimer=setInterval(refreshStatistics,30000);});
+onUnmounted(()=>clearInterval(statsTimer));
+function statNumber(value){return Number.isFinite(value)?value.toLocaleString():'—';}
+const howToPlay = ref(null);
 const displayFeedback = ref(null);
 watch([displayNotice, installHelp], async () => {
   await nextTick();
@@ -124,7 +141,6 @@ function updateSound() {
   });
   masterVolume.value = settings.volume;
   muted.value = settings.muted;
-  refreshMusicVolume();
 }
 
 function toggleMute() {
@@ -204,6 +220,11 @@ function chooseRenderQuality(quality) {
         </button></header>
 
         <nav v-if="activePanel === 'menu'" class="game-menu__actions">
+          <button v-if="!isPaused" class="game-menu__action game-menu__action--primary" type="button" @click="selectAction('play-online')">
+            <i class="fa-solid fa-globe" aria-hidden="true" />
+            <span><strong>PLAY ONLINE GAME</strong><small>Join the shared city</small></span>
+            <i class="fa-solid fa-chevron-right" aria-hidden="true" />
+          </button>
           <button
             v-if="isPaused"
             class="game-menu__action game-menu__action--primary"
@@ -219,14 +240,15 @@ function chooseRenderQuality(quality) {
             v-else
             class="game-menu__action game-menu__action--primary"
             type="button"
-            @click="openSaveSlots('new-game')"
+            @click="activePanel = 'offline'"
           >
             <i class="fa-solid fa-play" aria-hidden="true" />
-            <span><strong>PLAY</strong><small>Begin your Lagos story</small></span>
+            <span><strong>PLAY OFFLINE</strong><small>New game or load a save</small></span>
             <i class="fa-solid fa-chevron-right" aria-hidden="true" />
           </button>
 
           <button
+            v-if="isPaused"
             class="game-menu__action"
             type="button"
             @click="openSaveSlots('load-game')"
@@ -268,18 +290,14 @@ function chooseRenderQuality(quality) {
             <i class="fa-solid fa-chevron-right" aria-hidden="true" />
           </button>
 
-          <button v-if="!isPaused" class="game-menu__action" type="button" @click="toggleFullscreen">
-            <i class="fa-solid" :class="fullscreenActive ? 'fa-compress' : 'fa-expand'" aria-hidden="true" />
-            <span><strong>{{ fullscreenActive ? "EXIT FULLSCREEN" : "FULLSCREEN" }}</strong><small>Use the whole display</small></span>
-            <i class="fa-solid fa-chevron-right" aria-hidden="true" />
-          </button>
-          <button v-if="!isPaused" class="game-menu__action" type="button" :disabled="installing" @click="addToHomeScreen">
-            <i class="fa-solid fa-mobile-screen-button" aria-hidden="true" />
-            <span><strong>{{ installed ? "APP INSTALLED" : "ADD TO HOME SCREEN" }}</strong><small>Launch from your app icon</small></span>
-            <i class="fa-solid fa-chevron-right" aria-hidden="true" />
-          </button>
         </nav>
 
+        <section v-else-if="activePanel === 'offline'" class="game-menu__settings">
+          <button class="game-menu__back" type="button" @click="activePanel = 'menu'">← BACK</button>
+          <div class="game-menu__settings-heading"><span>PLAY OFFLINE</span></div>
+          <button class="game-menu__action" type="button" @click="openSaveSlots('new-game')"><i class="fa-solid fa-play" aria-hidden="true" /><span><strong>NEW GAME</strong><small>Start a new Lagos story</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
+          <button class="game-menu__action" type="button" @click="openSaveSlots('load-game')"><i class="fa-solid fa-box-archive" aria-hidden="true" /><span><strong>LOAD GAME</strong><small>Continue your saved game</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true" /></button>
+        </section>
         <section v-else-if="activePanel === 'settings'" class="game-menu__settings">
           <button
             class="game-menu__back"
@@ -293,7 +311,7 @@ function chooseRenderQuality(quality) {
           <label>
             <span>
               <i class="fa-solid fa-volume-high" aria-hidden="true" />
-              MASTER VOLUME
+              GAME SOUNDS VOLUME
               <b>{{ Math.round(masterVolume * 100) }}%</b>
             </span>
             <input
@@ -310,7 +328,7 @@ function chooseRenderQuality(quality) {
             class="game-menu__setting-button"
             type="button"
             role="switch"
-            aria-label="Sound"
+            aria-label="Game sounds"
             :aria-checked="!muted"
             @click="toggleMute"
           >
@@ -320,12 +338,14 @@ function chooseRenderQuality(quality) {
               aria-hidden="true"
             />
             <span>
-              <strong>SOUND</strong>
+              <strong>GAME SOUNDS</strong>
               <small>{{ muted ? "Muted" : "Enabled" }}</small>
             </span>
             <ToggleIcon :checked="!muted" />
           </button>
 
+          <label><span><i class="fa-solid fa-music" aria-hidden="true" /> MUSIC VOLUME <b>{{ Math.round(music.volume * 100) }}%</b></span><input v-model.number="music.volume" aria-label="Music volume" type="range" min="0" max="1" step="0.05" @input="updateMusic" /></label>
+          <button class="game-menu__setting-button" type="button" role="switch" aria-label="Music" :aria-checked="!music.muted" @click="music.muted = !music.muted; updateMusic()"><i class="fa-solid fa-music" aria-hidden="true" /><span><strong>MUSIC</strong><small>{{ music.muted ? 'Muted' : 'Enabled' }}</small></span><ToggleIcon :checked="!music.muted" /></button>
           <button
             class="game-menu__setting-button"
             type="button"
@@ -435,7 +455,7 @@ function chooseRenderQuality(quality) {
           <button
             class="game-menu__back"
             type="button"
-            @click="activePanel = 'menu'"
+            @click="activePanel = isPaused ? 'menu' : 'offline'"
           >
             <i class="fa-solid fa-arrow-left" aria-hidden="true" />
             BACK
@@ -498,29 +518,47 @@ function chooseRenderQuality(quality) {
       </section>
     </main>
 
-    <footer class="game-menu__footer">
+    <div v-if="!isPaused" class="game-menu__display-actions" aria-label="Display, help and installation">
+      <button type="button" @click="toggleFullscreen"><i class="fa-solid" :class="fullscreenActive ? 'fa-compress' : 'fa-expand'" aria-hidden="true" /><span>{{ fullscreenActive ? 'Exit Fullscreen' : 'Fullscreen' }}</span></button>
+      <button type="button" @click="howToPlay.open()"><i class="fa-solid fa-book-open" aria-hidden="true" /><span>How to Play</span></button>
+      <button type="button" :disabled="installing" @click="addToHomeScreen"><i class="fa-solid fa-mobile-screen-button" aria-hidden="true" /><span>{{ installed ? 'App Installed' : 'Add to Home Screen' }}</span></button>
+    </div>
+    <HowToPlay ref="howToPlay" />
+    <div v-if="!isPaused" class="game-menu__statistics" aria-label="Online statistics">
+      <span><strong>{{ statNumber(statistics.online) }}</strong> Online now</span>
+      <span><strong>{{ statNumber(statistics.visits) }}</strong> Visits</span>
+      <span><strong>{{ statNumber(statistics.users) }}</strong> Users</span>
+    </div>
+    <footer v-if="isPaused" class="game-menu__footer">
       <span><kbd>ESC</kbd> {{ isPaused ? "Resume" : "Pause in game" }}</span>
-      <span>LOCAL OFFLINE BUILD</span>
+
     </footer>
   </section>
 </template>
 
 <style scoped>
-.game-menu__display-notice, .game-menu__install-help { padding:12px; margin:12px 0; border:2px solid #17213a; border-radius:12px; background:#fff7dc; color:#17213a; font-size:14px; line-height:1.4; }
+.game-menu__statistics {position:absolute;top:max(12px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:2;display:flex;gap:clamp(10px,3vw,28px);padding:10px 16px;border-radius:14px;background:#fff8df;color:#17213a;max-width:calc(100% - 24px);box-sizing:border-box;font-size:clamp(11px,1.4vw,15px);}
+.game-menu__statistics span {white-space:nowrap;}
+
+.game-menu__display-actions { position:absolute; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); display:flex; justify-content:center; gap:10px; width:max-content; max-width:calc(100% - 32px); z-index:2; }
+.game-menu__display-actions button { display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; min-height:44px; padding:10px 16px; border:1px solid rgb(23 33 58 / 16%); border-radius:12px; background:#ffdb3b; color:#17213a; font:inherit; font-size:14px; cursor:pointer; white-space:normal; }
+.game-menu__display-actions button:disabled { opacity:.5; }
+
+.game-menu__display-notice, .game-menu__install-help { padding:12px; margin:12px 0; border:1px solid rgb(23 33 58 / 16%); border-radius:12px; background:#fff7dc; color:#17213a; font-size:14px; line-height:1.4; }
 .game-menu__install-help ol { padding-left:20px; }
 .game-menu__install-help li + li { margin-top:6px; }
 .game-menu__action span { min-width:0; overflow-wrap:anywhere; }
 .game-menu__heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .game-menu__heading > div { min-width:0; }
 .game-menu__heading p { margin:6px 0 0; font-size:13px; line-height:1.4; }
-.game-menu__mute { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border:3px solid #17213a; border-radius:12px; background:#ffd43b; color:#17213a; font-size:19px; cursor:pointer; }
+.game-menu__mute { display:grid; place-items:center; flex:0 0 44px; width:44px; height:44px; border:1px solid rgb(23 33 58 / 16%); border-radius:12px; background:#ffd43b; color:#17213a; font-size:19px; cursor:pointer; }
 .game-menu__setting-button[role="switch"] { grid-template-columns:36px minmax(0,1fr) 44px; }
 
 .game-menu__slot-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
-.game-menu__delete-slot { min-width:64px; min-height:44px; border:2px solid #17213a; border-radius:10px; background:#ffe6e8; color:#9d1821; cursor:pointer; }
+.game-menu__delete-slot { min-width:64px; min-height:44px; border:1px solid rgb(23 33 58 / 16%); border-radius:10px; background:#ffe6e8; color:#9d1821; cursor:pointer; }
 .game-menu__delete-confirm { grid-column:1 / -1; padding:12px; border:2px solid #9d1821; border-radius:10px; background:#fff7dc; }
 .game-menu__delete-confirm p { margin:0 0 10px; font-size:13px; }
-.game-menu__delete-confirm button { min-height:44px; margin:0 6px 4px 0; padding:8px 10px; border:2px solid #17213a; border-radius:8px; background:#ffd43b; cursor:pointer; }
+.game-menu__delete-confirm button { min-height:44px; margin:0 6px 4px 0; padding:8px 10px; border:1px solid rgb(23 33 58 / 16%); border-radius:8px; background:#ffd43b; cursor:pointer; }
 
 .game-menu {
   position: absolute;
@@ -564,7 +602,7 @@ function chooseRenderQuality(quality) {
   border: 1px solid var(--hud-metal-light);
   border-radius: 0;
   background: var(--hud-panel-deep);
-  box-shadow: var(--hud-shadow), 0 28px 70px rgb(0 0 0 / 58%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   clip-path: polygon(
     12px 0,
     100% 0,
@@ -612,8 +650,7 @@ function chooseRenderQuality(quality) {
   color: #eee9dc;
   background: linear-gradient(180deg, #4e4a3f, #292823);
   box-shadow:
-    inset 0 1px rgb(255 255 255 / 9%),
-    inset 0 -3px rgb(0 0 0 / 38%);
+    none;
   clip-path: polygon(
     7px 0,
     100% 0,
@@ -692,7 +729,7 @@ function chooseRenderQuality(quality) {
   border-radius: 17px;
   color: #132851;
   background: linear-gradient(145deg, #ffe26c, #ffb80d);
-  box-shadow: 0 8px 20px rgb(1 19 55 / 38%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font-size: 25px;
   place-items: center;
   transform: rotate(-4deg);
@@ -739,8 +776,7 @@ function chooseRenderQuality(quality) {
   border-radius: 28px;
   background: #0b3b82;
   box-shadow:
-    inset 0 2px rgb(255 255 255 / 20%),
-    0 30px 80px rgb(0 10 41 / 48%);
+    none;
 }
 
 .game-menu__navigation {
@@ -790,8 +826,7 @@ function chooseRenderQuality(quality) {
   color: #ffffff;
   background: linear-gradient(180deg, #2166b8, #124988);
   box-shadow:
-    inset 0 1px rgb(255 255 255 / 17%),
-    inset 0 -3px rgb(3 29 75 / 38%);
+    none;
   text-align: left;
   cursor: pointer;
   transition:
@@ -932,7 +967,7 @@ function chooseRenderQuality(quality) {
   height: 100px;
   border-radius: 50%;
   background: #ffe06b;
-  box-shadow: 0 0 80px #fff2a8;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-menu__skyline {
@@ -991,7 +1026,7 @@ function chooseRenderQuality(quality) {
   right: 18%;
   color: #ffca31;
   font-size: 58px;
-  filter: drop-shadow(0 8px 3px rgb(2 13 37 / 42%));
+  filter: none;
   transform: skewY(4deg);
 }
 
@@ -1084,7 +1119,7 @@ function chooseRenderQuality(quality) {
   border: 1px solid var(--hud-metal-light);
   border-radius: 0;
   background: var(--hud-panel-deep);
-  box-shadow: var(--hud-shadow), 0 28px 70px rgb(0 0 0 / 58%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   clip-path: polygon(
     12px 0,
     100% 0,
@@ -1132,8 +1167,7 @@ function chooseRenderQuality(quality) {
   color: #eee9dc;
   background: linear-gradient(180deg, #4e4a3f, #292823);
   box-shadow:
-    inset 0 1px rgb(255 255 255 / 9%),
-    inset 0 -3px rgb(0 0 0 / 38%);
+    none;
   clip-path: polygon(
     7px 0,
     100% 0,

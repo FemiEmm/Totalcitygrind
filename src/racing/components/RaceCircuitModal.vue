@@ -38,7 +38,7 @@ const formatMoney = (value) => `₦${Number(value).toLocaleString()}`;
 
 <style scoped>
 .race-modal{position:absolute;z-index:120;inset:0;display:grid;place-items:center;padding:18px;background:#080d13d1}
-.race-card{position:relative;width:min(650px,94vw);padding:28px;border:2px solid #aaa184;color:#eee9d8;background:#292820;box-shadow:0 20px 50px #000c}
+.race-card{position:relative;width:min(650px,94vw);padding:28px;border:2px solid #aaa184;color:#eee9d8;background:#292820;box-shadow:0 2px 8px rgb(23 33 58 / 10%)}
 .race-card>span{color:#d8c365;font-size:12px;letter-spacing:.14em}.race-card h2{margin:6px 0;font-size:30px}.race-card p{color:#beb7a1}
 .race-card__close{position:absolute;top:12px;right:12px;width:38px;height:38px;border:1px solid #69624f;color:#eee9d8;background:#39362c;font-size:24px}
 .race-card__targets{display:grid;grid-template-columns:repeat(3,1fr);margin:22px 0;gap:8px}.race-card__targets strong{display:grid;padding:14px;border:1px solid #625c4b;background:#343229;color:#e4ce6d}.race-card__targets small{margin-top:5px;color:#beb7a1;font-size:11px}

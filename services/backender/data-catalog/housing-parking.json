@@ -1,0 +1,1298 @@
+{
+  "starter-rental": {
+    "x": 840,
+    "y": 480,
+    "width": 120,
+    "height": 120
+  },
+  "mainland-home": {
+    "x": 1920,
+    "y": 1440,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-a-room-1": {
+    "x": 840,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-a-room-2": {
+    "x": 960,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-a-room-3": {
+    "x": 1080,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-a-room-4": {
+    "x": 1200,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-b-room-1": {
+    "x": 3240,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-b-room-2": {
+    "x": 3360,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-b-room-3": {
+    "x": 3480,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-b-room-4": {
+    "x": 3600,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-c-room-1": {
+    "x": 480,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-c-room-2": {
+    "x": 600,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-c-room-3": {
+    "x": 720,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-c-room-4": {
+    "x": 840,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-d-room-1": {
+    "x": 1440,
+    "y": 1080,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-d-room-2": {
+    "x": 1440,
+    "y": 1200,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-d-room-3": {
+    "x": 1440,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-d-room-4": {
+    "x": 1440,
+    "y": 1440,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-e-room-1": {
+    "x": 2520,
+    "y": 1200,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-e-room-2": {
+    "x": 2520,
+    "y": 1320,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-e-room-3": {
+    "x": 2520,
+    "y": 1440,
+    "width": 120,
+    "height": 120
+  },
+  "single-room-row-e-room-4": {
+    "x": 2520,
+    "y": 1560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w01": {
+    "x": 1680,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w02": {
+    "x": 1800,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w03": {
+    "x": 1920,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w04": {
+    "x": 2040,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w05": {
+    "x": 2160,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w06": {
+    "x": 2280,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w07": {
+    "x": 1680,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w08": {
+    "x": 1800,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w09": {
+    "x": 1920,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w10": {
+    "x": 2040,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w11": {
+    "x": 2160,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w12": {
+    "x": 2280,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w13": {
+    "x": 1680,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w14": {
+    "x": 1800,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w15": {
+    "x": 1920,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w16": {
+    "x": 2040,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w17": {
+    "x": 2160,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w18": {
+    "x": 2280,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w19": {
+    "x": 1680,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w20": {
+    "x": 1800,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w21": {
+    "x": 1920,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w22": {
+    "x": 2040,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w23": {
+    "x": 2160,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w24": {
+    "x": 2280,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w25": {
+    "x": 1680,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w26": {
+    "x": 1800,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w27": {
+    "x": 1920,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w28": {
+    "x": 2040,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w29": {
+    "x": 2160,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w30": {
+    "x": 2280,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w31": {
+    "x": 1680,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w32": {
+    "x": 1800,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w33": {
+    "x": 1920,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w34": {
+    "x": 2040,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w35": {
+    "x": 2160,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w36": {
+    "x": 2280,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w37": {
+    "x": 1680,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w38": {
+    "x": 1800,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w39": {
+    "x": 1920,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w40": {
+    "x": 2040,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w41": {
+    "x": 2160,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w42": {
+    "x": 2280,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w43": {
+    "x": 1680,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w44": {
+    "x": 1800,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w45": {
+    "x": 1920,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w46": {
+    "x": 2040,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w47": {
+    "x": 2160,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w48": {
+    "x": 2280,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w49": {
+    "x": 1680,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w50": {
+    "x": 1800,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w51": {
+    "x": 1920,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w52": {
+    "x": 2040,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w53": {
+    "x": 2160,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w54": {
+    "x": 2280,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w55": {
+    "x": 1680,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w56": {
+    "x": 1800,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w57": {
+    "x": 1920,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w58": {
+    "x": 2040,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w59": {
+    "x": 2160,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w60": {
+    "x": 2280,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w61": {
+    "x": 1680,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w62": {
+    "x": 1800,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w63": {
+    "x": 1920,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w64": {
+    "x": 2040,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w65": {
+    "x": 2160,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w66": {
+    "x": 2280,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w67": {
+    "x": 1680,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w68": {
+    "x": 1800,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w69": {
+    "x": 1920,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w70": {
+    "x": 2040,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w71": {
+    "x": 2160,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w72": {
+    "x": 2280,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w73": {
+    "x": 1680,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w74": {
+    "x": 1800,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w75": {
+    "x": 1920,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w76": {
+    "x": 2040,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w77": {
+    "x": 2160,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w78": {
+    "x": 2280,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w79": {
+    "x": 1680,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w80": {
+    "x": 1800,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w81": {
+    "x": 1920,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w82": {
+    "x": 2040,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w83": {
+    "x": 2160,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w84": {
+    "x": 2280,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w85": {
+    "x": 1680,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w86": {
+    "x": 1800,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w87": {
+    "x": 1920,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w88": {
+    "x": 2040,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w89": {
+    "x": 2160,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-w90": {
+    "x": 2280,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e01": {
+    "x": 3600,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e02": {
+    "x": 3720,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e03": {
+    "x": 3840,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e04": {
+    "x": 3960,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e05": {
+    "x": 4080,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e06": {
+    "x": 4200,
+    "y": -7560,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e07": {
+    "x": 3600,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e08": {
+    "x": 3720,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e09": {
+    "x": 3840,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e10": {
+    "x": 3960,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e11": {
+    "x": 4080,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e12": {
+    "x": 4200,
+    "y": -7080,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e13": {
+    "x": 3600,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e14": {
+    "x": 3720,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e15": {
+    "x": 3840,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e16": {
+    "x": 3960,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e17": {
+    "x": 4080,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e18": {
+    "x": 4200,
+    "y": -6600,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e19": {
+    "x": 3600,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e20": {
+    "x": 3720,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e21": {
+    "x": 3840,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e22": {
+    "x": 3960,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e23": {
+    "x": 4080,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e24": {
+    "x": 4200,
+    "y": -6120,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e25": {
+    "x": 3600,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e26": {
+    "x": 3720,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e27": {
+    "x": 3840,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e28": {
+    "x": 3960,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e29": {
+    "x": 4080,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e30": {
+    "x": 4200,
+    "y": -5640,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e31": {
+    "x": 3600,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e32": {
+    "x": 3720,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e33": {
+    "x": 3840,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e34": {
+    "x": 3960,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e35": {
+    "x": 4080,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e36": {
+    "x": 4200,
+    "y": -5160,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e37": {
+    "x": 3600,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e38": {
+    "x": 3720,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e39": {
+    "x": 3840,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e40": {
+    "x": 3960,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e41": {
+    "x": 4080,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e42": {
+    "x": 4200,
+    "y": -4680,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e43": {
+    "x": 3600,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e44": {
+    "x": 3720,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e45": {
+    "x": 3840,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e46": {
+    "x": 3960,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e47": {
+    "x": 4080,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e48": {
+    "x": 4200,
+    "y": -4200,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e49": {
+    "x": 3600,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e50": {
+    "x": 3720,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e51": {
+    "x": 3840,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e52": {
+    "x": 3960,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e53": {
+    "x": 4080,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e54": {
+    "x": 4200,
+    "y": -3720,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e55": {
+    "x": 3600,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e56": {
+    "x": 3720,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e57": {
+    "x": 3840,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e58": {
+    "x": 3960,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e59": {
+    "x": 4080,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e60": {
+    "x": 4200,
+    "y": -3240,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e61": {
+    "x": 3600,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e62": {
+    "x": 3720,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e63": {
+    "x": 3840,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e64": {
+    "x": 3960,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e65": {
+    "x": 4080,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e66": {
+    "x": 4200,
+    "y": -2760,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e67": {
+    "x": 3600,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e68": {
+    "x": 3720,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e69": {
+    "x": 3840,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e70": {
+    "x": 3960,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e71": {
+    "x": 4080,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e72": {
+    "x": 4200,
+    "y": -2280,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e73": {
+    "x": 3600,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e74": {
+    "x": 3720,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e75": {
+    "x": 3840,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e76": {
+    "x": 3960,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e77": {
+    "x": 4080,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e78": {
+    "x": 4200,
+    "y": -1800,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e79": {
+    "x": 3600,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e80": {
+    "x": 3720,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e81": {
+    "x": 3840,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e82": {
+    "x": 3960,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e83": {
+    "x": 4080,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e84": {
+    "x": 4200,
+    "y": -1320,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e85": {
+    "x": 3600,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e86": {
+    "x": 3720,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e87": {
+    "x": 3840,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e88": {
+    "x": 3960,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e89": {
+    "x": 4080,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "northern-estate-e90": {
+    "x": 4200,
+    "y": -840,
+    "width": 120,
+    "height": 120
+  },
+  "wealthy-estate-home": {
+    "x": 960,
+    "y": 2520,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-1": {
+    "x": 1200,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-2": {
+    "x": 1560,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-3": {
+    "x": 2280,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-4": {
+    "x": 240,
+    "y": 3240,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-5": {
+    "x": 840,
+    "y": 3000,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-6": {
+    "x": 1200,
+    "y": 3000,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-7": {
+    "x": 1560,
+    "y": 3000,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-8": {
+    "x": 2640,
+    "y": 3000,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-9": {
+    "x": 840,
+    "y": 3360,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-10": {
+    "x": 1200,
+    "y": 3360,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-11": {
+    "x": 1560,
+    "y": 3360,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-12": {
+    "x": 1920,
+    "y": 3360,
+    "width": 120,
+    "height": 120
+  },
+  "alimosho-home-13": {
+    "x": 2160,
+    "y": 3600,
+    "width": 120,
+    "height": 120
+  }
+}

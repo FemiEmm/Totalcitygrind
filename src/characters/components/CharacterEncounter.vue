@@ -123,7 +123,7 @@ defineEmits(["accept", "decline", "close"]);
     ),
     linear-gradient(145deg, #292820, #151612);
   color: #eee8d5;
-  box-shadow: 0 24px 70px rgb(0 0 0 / 70%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .character-encounter__card--call {
@@ -142,7 +142,7 @@ defineEmits(["accept", "decline", "close"]);
   position: absolute;
   inset: 0;
   content: "";
-  box-shadow: inset -30px 0 45px rgb(10 10 8 / 55%);
+  box-shadow: none;
   pointer-events: none;
 }
 

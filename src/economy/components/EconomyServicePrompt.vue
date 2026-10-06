@@ -67,7 +67,7 @@ defineProps({
       transparent 2px 9px
     ),
     linear-gradient(150deg, rgb(67 63 53 / 98%), rgb(24 24 20 / 98%));
-  box-shadow: var(--hud-shadow), 0 16px 36px rgb(0 0 0 / 45%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   clip-path: polygon(
     8px 0,
     100% 0,

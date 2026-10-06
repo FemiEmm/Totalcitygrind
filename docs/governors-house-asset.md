@@ -1,0 +1,6 @@
+# Governor residence asset
+
+Generated using the built-in image generation tool. Intended map footprint: 2x2 tiles. Asset only; not placed on the map.
+
+Final prompt:
+Correct ONLY the camera projection and simplify this building sprite. Redraw as a perfectly FLAT ORTHOGRAPHIC ROOF PLAN, camera directly vertically above looking DOWN at 90 degrees. Remove EVERY visible vertical cream wall face, every front step, pillar side, door, and architectural elevation. Roof edges must directly meet the ground outline with NO vertical offset. All roof rectangles have parallel axis-aligned sides, absolutely no perspective. Perimeter wall is just a thin flat cream outline with flat square post tops. Entrance is a simple gap in the bottom outline, not a gatehouse facade. Keep emerald green roof tops arranged around a small square cream courtyard with two simple green shrub beds. Reduce the residence to a compact main roof plus two short wings so it reads as a SMALL 2x2-tile game building, not a sprawling palace. Simple clean illustrated 2D cel-shaded game art, minimal textures, no realistic rendering. Genuine transparent exterior background, no logos, no text, no flags. Only roofs, courtyard paving and plant tops visible.

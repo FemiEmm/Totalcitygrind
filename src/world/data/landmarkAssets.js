@@ -10,7 +10,7 @@ import eventCentreUrl from "../../assets/buildings/event-centre.png";
 import liveMusicClubUrl from "../../assets/buildings/live-music-club.png";
 import luxuryHotelUrl from "../../assets/buildings/luxury-hotel.png";
 import mechanicUrl from "../../assets/buildings/mechanic.png";
-import nightClubUrl from "../../assets/buildings/night-club.png";
+import nightClubUrl from "../../assets/buildings/night-club-flat-roof.png";
 import nightlifeRestaurantRowUrl from "../../assets/buildings/nightlife-restaurant-row.png";
 import officeHubUrl from "../../assets/buildings/office-hub.png";
 import petrolStationUrl from "../../assets/buildings/petrol-station.png";

@@ -87,7 +87,7 @@ const payableCost = computed(() => Math.round(props.cost * (useCoupon.value ? 0.
   background: #f4faf8;
   color: #17322d;
   text-align: center;
-  box-shadow: 0 24px 70px rgb(0 0 0 / 50%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .treatment-modal__doctor {

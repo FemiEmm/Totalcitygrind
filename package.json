@@ -16,11 +16,16 @@
     "validate:map": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateMap.mjs",
     "preview": "vite preview",
     "validate:world2": "node --no-warnings --experimental-loader ./scripts/assetLoader.mjs scripts/validateWorld2Regression.mjs",
-    "validate:mobile": "node scripts/validateMobile.mjs"
+    "validate:mobile": "node scripts/validateMobile.mjs",
+    "dev:connected": "node scripts/dev-connected.mjs",
+    "sync:homes": "node scripts/sync-home-catalog.mjs",
+    "sync:bpc": "node scripts/sync-bpc-catalog.mjs",
+    "dev:supabase": "node scripts/dev-connected.mjs --supabase"
   },
   "dependencies": {
-    "vue": "^3.5.39",
-    "@fortawesome/fontawesome-free": "6.7.2"
+    "@fortawesome/fontawesome-free": "6.7.2",
+    "socket.io-client": "^4.8.1",
+    "vue": "^3.5.39"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",

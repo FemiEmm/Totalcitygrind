@@ -353,7 +353,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "east-gate-crossroads-lights",
-    "East Gate Crossroads",
+    "Ikeja Along Crossroads",
     59,
     8,
     [EAST, WEST, NORTH, SOUTH],
@@ -361,7 +361,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "residential-crossroads-lights",
-    "Residential Crossroads",
+    "Ifako-Ijaiye LGA Crossroads",
     25,
     8,
     [EAST, WEST, NORTH, SOUTH],
@@ -369,7 +369,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "work-hub-crossroads-lights",
-    "Work Hub Crossroads",
+    "Ikeja LGA Crossroads",
     46,
     8,
     [EAST, WEST, NORTH, SOUTH],
@@ -377,7 +377,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "wealthy-crossroads-lights",
-    "Wealthy Estate Crossroads",
+    "Alimosho LGA Crossroads",
     25,
     24,
     [EAST, WEST, NORTH, SOUTH],
@@ -385,7 +385,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "nightlife-crossroads-lights",
-    "Nightlife Crossroads",
+    "Mushin LGA Crossroads",
     47,
     24,
     [EAST, WEST, NORTH, SOUTH],
@@ -401,7 +401,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "wealthy-cross-city-lights",
-    "Wealthy Cross-City Junction",
+    "Alimosho LGA Cross-City Junction",
     25,
     32,
     [EAST, WEST, SOUTH],
@@ -409,7 +409,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "nightlife-cross-city-lights",
-    "Nightlife Cross-City Junction",
+    "Mushin LGA Cross-City Junction",
     47,
     32,
     [EAST, WEST, SOUTH],
@@ -451,7 +451,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   trafficLight(
     "harbour-crossroads-lights",
-    "Harbour Crossroads",
+    "Ojuelegba Crossroads",
     40,
     32,
     [EAST, WEST, NORTH, SOUTH],
@@ -498,7 +498,7 @@ const ALL_TRAFFIC_LIGHTS = Object.freeze([
   ),
   customTrafficLight(
     "terminal-west-gate-crossroads-lights",
-    "Terminal West Gate Crossroads",
+    "Terminal Ile Epo Crossroads",
     35.5 * GRID_SIZE,
     8 * GRID_SIZE,
     [

@@ -1,4 +1,14 @@
 <script setup>
+import HeistPanel from '../../heist/HeistPanel.vue';
+import HousingApp from "../../housing/HousingApp.vue";
+import GovernmentPanel from '../../government/GovernmentPanel.vue';
+import CareerPanel from "../../careers/CareerPanel.vue";
+import BigPeopleClub from "../../wealth/BigPeopleClub.vue";
+import { STOCK_ADVISER_PRICE, STOCK_ADVISER_DAYS } from '../../economy/data/stockMarket.js';
+import { PHONES, phoneThemeStyle } from '../../customization/catalogue.js';
+import '../../customization/phoneThemes.css';
+import CustomizeShop from "../../customization/components/CustomizeShop.vue";
+import { createManagedAudio } from "../../audio/audioLifecycle.js";
 import {
   computed,
   onBeforeUnmount,
@@ -13,6 +23,8 @@ import { clearGameCaches } from "../../game/appCache.js";
 import { PHONE_APPS } from "../data/phoneApps.js";
 import phoneLauncherUrl from "../../assets/ui/phone-launcher.png";
 import {
+  musicAudioSettings,
+  setMusicSettings,
   MUSIC_TRACKS,
   musicPlayerState,
   openCustomMusicFolder,
@@ -40,12 +52,11 @@ const PHONE_STATE_STORAGE_KEY = "total-city-grind-phone-v2";
 
 const PHONE_CONTACTS = Object.freeze([
   Object.freeze({
-    id: "sister",
-    name: "Your Sister",
+    id: "family-group",
+    name: "Family group chat",
     role: "Family back home",
     iconClass: "fa-solid fa-user-group",
-    initials: "SI",
-    portraitUrl: CHARACTER_DEFINITIONS.sister.portraitUrl,
+    initials: "FG",
   }),
   Object.freeze({
     id: "megapay-bank",
@@ -103,52 +114,16 @@ const PHONE_CONTACTS = Object.freeze([
   }),
   Object.freeze({
     id: "mutiu-illegal",
-    name: "Mutiu Illegal",
-    role: "Underground Coast City street races",
+    name: "Mr-Wire",
+    role: "Hustler",
     iconClass: "fa-solid fa-flag-checkered",
     initials: "MI",
     portraitUrl: CHARACTER_DEFINITIONS.mutiu.portraitUrl,
   }),
 ]);
 
-const FAMILY_MESSAGE_CONTACTS = Object.freeze([
-  Object.freeze({
-    id: "mother",
-    name: "Mother",
-    initials: "MO",
-    preview: "How are you, my child?",
-    greeting: "How are you, my child? Is the city treating you well? Remember to eat properly and get enough rest.",
-  }),
-  Object.freeze({
-    id: "father",
-    name: "Father",
-    initials: "FA",
-    preview: "How is work in the city?",
-    greeting: "How is work in the city? Stay focused, drive carefully, and do not rush yourself. You will find your feet.",
-  }),
-  Object.freeze({
-    id: "brother",
-    name: "Brother",
-    initials: "BR",
-    preview: "How far? How is Lagos?",
-    greeting: "How far? I hope Lagos is treating you well. Let me know when you have settled down properly.",
-  }),
-  Object.freeze({
-    id: "aunty",
-    name: "Aunty",
-    initials: "AU",
-    preview: "How are you coping in Lagos?",
-    greeting: "My dear, how are you coping in Lagos? Take good care of yourself for us and do not forget to call home.",
-  }),
-  Object.freeze({
-    id: "uncle",
-    name: "Uncle",
-    initials: "UN",
-    preview: "How is the hustle going?",
-    greeting: "How is the hustle going? Keep your head up, work hard, and make sensible decisions. The city rewards patience.",
-  }),
-]);
-const FAMILY_MESSAGE_CONTACT_IDS = Object.freeze(FAMILY_MESSAGE_CONTACTS.map((contact) => contact.id));
+const FAMILY_MESSAGE_CONTACT_IDS = Object.freeze(['sister', 'mother', 'father', 'brother', 'aunty', 'uncle']);
+function familyContactId(id) { return FAMILY_MESSAGE_CONTACT_IDS.includes(id) ? 'family-group' : id; }
 
 const CALLABLE_CONTACT_IDS = Object.freeze([
   "mechanic",
@@ -158,6 +133,16 @@ const CALLABLE_CONTACT_IDS = Object.freeze([
 ]);
 
 const props = defineProps({
+ heistMinute:Number,heistView:Object,heistBusy:Boolean,heistError:String,
+  housingView:Object,housingBusy:Boolean,housingError:String,
+  intoxication:{type:Number,default:0},
+  government:{type:Object,default:null},governmentUnread:{type:Number,default:0},governmentBusy:Boolean,governmentError:String,
+  careerState: {type:Object,default:()=>({courses:{},certificates:[],lesson:null,job:null})},
+  careerMinute:Number, careerOccupied:Object, careerBusy:Boolean, careerError:String, aiTrafficEnabled:{type:Boolean,default:true},
+  netWorth: { type: Object, default: () => ({ total: 0, cash: 0, savings: 0, stocks: 0, properties: 0, vehicles: 0, businesses: 0, debts: 0 }) },
+  playerName: { type: String, default: "Driver" },
+  customizationVehicle: { type: Object, default: () => ({id:'starter-danfo',width:40,length:70}) },
+  customizationState: { type: Object, default: () => ({owned:{sticker:[],paint:[],phone:[]},vehicles:{},phone:null}) },
   gameTime: {
     type: String,
     default: "6:00 AM",
@@ -181,6 +166,10 @@ const props = defineProps({
   savingsBalance: {
     type: Number,
     default: 0,
+  },
+  stockAdviser: {
+    type: Object,
+    default: () => ({ untilDay: 0, messages: [], nextId: 1, readThrough: 0 }),
   },
   stockMarket: {
     type: Array,
@@ -441,6 +430,9 @@ const props = defineProps({
   },
 });
 
+const equippedPhone = computed(() => PHONES.find(phone => phone.id === props.customizationState.phone));
+const equippedPhoneStyle = computed(() => phoneThemeStyle(equippedPhone.value));
+
 const weekdayLabel = computed(() => {
   const weekdays = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
   const day = Math.max(1, Math.floor(Number(props.currentDay) || 1));
@@ -448,6 +440,11 @@ const weekdayLabel = computed(() => {
 });
 
 const emit = defineEmits([
+  "heist-action",
+  "housing-action",
+  "government-action",
+  "career-action", "toggle-ai-traffic",
+  "customize-vehicle",
   "select-route",
   "call-mechanic",
   "call-doctor",
@@ -455,6 +452,9 @@ const emit = defineEmits([
   "report-traffic",
   "repay-loan",
   "take-bank-loan",
+  "subscribe-stock-adviser",
+  "cancel-stock-adviser",
+  "read-stock-adviser",
   "buy-stock",
   "sell-stock",
   "accept-incoming-call",
@@ -586,10 +586,11 @@ const accountAppIds = Object.freeze([
 ]);
 
 const appHeaderTitle = computed(() => {
+  if (activeAppId.value === "bpc") return "Big People Club";
+  if (activeAppId.value === "messages" && activeMessageContactId.value === "government") return "Government";
+  if (activeAppId.value === "messages" && activeMessageContactId.value === "stock-adviser") return "Stock Adviser";
   if (activeAppId.value === "messages" && activeMessageContactId.value) {
     return PHONE_CONTACTS.find((contact) => {
-      return contact.id === activeMessageContactId.value;
-    })?.name ?? FAMILY_MESSAGE_CONTACTS.find((contact) => {
       return contact.id === activeMessageContactId.value;
     })?.name ?? "Messages";
   }
@@ -677,6 +678,8 @@ function runDebugShortcut(eventName) {
 
 const hasUnreadNotification = computed(() => {
   return (
+    props.governmentUnread > 0 ||
+    adviserUnreadCount.value > 0 ||
     hasUnreadMessage.value ||
     hasUnreadBankMessage.value ||
     hasUnreadMotoRequest.value ||
@@ -685,8 +688,48 @@ const hasUnreadNotification = computed(() => {
   );
 });
 
+const adviserUnreadCount = computed(() => props.stockAdviser.messages.filter(message => message.id > props.stockAdviser.readThrough).length);
+watch(()=>props.governmentUnread, count=>{if(count&&activeAppId.value==='messages'&&activeMessageContactId.value==='government')emit('government-action',{op:'read'});});
+const adviserActive = computed(() => props.stockAdviser.untilDay > props.currentDay);
+watch(() => props.stockAdviser.nextId, (nextId, previousId) => {
+  if (nextId > previousId && props.stockAdviser.messages.length) triggerPhoneNotification();
+  if (activeAppId.value === 'messages' && activeMessageContactId.value === 'stock-adviser') emit('read-stock-adviser');
+});
+
+// Watch message identities, not unread counts: reading and polling must not replay alerts.
+watch(
+  () => props.government?.messages?.map(message => message.id) ?? null,
+  (ids, previousIds) => {
+    if (!ids || !previousIds) return;
+    const previousLatest = Math.max(0, ...previousIds);
+    if (ids.some(id => id > previousLatest)) triggerPhoneNotification();
+  },
+);
+watch(
+  () => (props.propertyState.rentals?.messages ?? []).map(message => JSON.stringify([message.day, message.propertyId, message.text])),
+  (messages, previousMessages) => {
+    const previous = new Map();
+    for (const key of previousMessages) previous.set(key, (previous.get(key) ?? 0) + 1);
+    const hasNew = messages.some(key => {
+      const count = previous.get(key) ?? 0;
+      if (!count) return true;
+      previous.set(key, count - 1);
+      return false;
+    });
+    if (!hasNew) return;
+    if (activeAppId.value !== 'messages' || activeMessageContactId.value !== 'realtor') markMessageContactUnread('realtor');
+    triggerPhoneNotification();
+  },
+);
+watch(() => props.jobRequired, (required, previous) => {
+  if (required && !previous) triggerPhoneNotification();
+});
+
+watch(()=>props.heistView?.available,(available,previous)=>{if(available&&!previous){markMessageContactUnread('mutiu-illegal');triggerPhoneNotification();}});
 const notificationCount = computed(() => {
   return (
+    Number(props.governmentUnread > 0) +
+    Number(adviserUnreadCount.value > 0) +
     Number(hasUnreadMessage.value) +
     Number(hasUnreadBankMessage.value) +
     Number(hasUnreadMotoRequest.value) +
@@ -697,10 +740,11 @@ const notificationCount = computed(() => {
 
 const bankMessages = computed(() => props.transactions);
 const hasMessagesAppAttention = computed(() => {
-  return hasUnreadMessage.value || hasUnreadBankMessage.value;
+  return props.governmentUnread > 0 || adviserUnreadCount.value > 0 || hasUnreadMessage.value || hasUnreadBankMessage.value;
 });
 
 function markMessageContactUnread(contactId) {
+  contactId = familyContactId(contactId);
   if (!contactId || unreadMessageContactIds.value.includes(contactId)) {
     return;
   }
@@ -719,9 +763,7 @@ const familyRequestEntries = computed(() => {
   const entries = props.lifeObligations.familyRequests?.entries ?? [];
   return Array.isArray(entries) ? entries : Object.values(entries);
 });
-function getFamilyRequest(contactId) {
-  return familyRequestEntries.value.find((entry) => entry.contactId === contactId) ?? null;
-}
+
 function getFamilyRequestRemaining(request) {
   return request ? Math.max(0, Number(request.amount ?? 0) - Number(request.paidAmount ?? 0)) : 0;
 }
@@ -731,10 +773,10 @@ function activeFamilyAttentionContactId() {
     return entry.id === props.lifeObligations.familyRequests?.activeId;
   });
   if (activeFamilyRequest?.contactId) {
-    return activeFamilyRequest.contactId;
+    return "family-group";
   }
   if (["active", "late"].includes(props.lifeObligations.schoolFees?.status)) {
-    return "sister";
+    return "family-group";
   }
   return null;
 }
@@ -748,7 +790,7 @@ const megapayPaymentOptions = computed(() => {
   if (["active", "late"].includes(props.lifeObligations.schoolFees?.status)) {
     options.push({
       id: "school-fees",
-      label: "Sister's school fees",
+      label: "Family school fees",
       amount: Number(props.lifeObligations.schoolFees?.remainingAmount ?? 0),
     });
   }
@@ -758,7 +800,7 @@ const megapayPaymentOptions = computed(() => {
   if (activeFamilyRequest && ["active", "late"].includes(activeFamilyRequest.status)) {
     options.push({
       id: "family-request",
-      label: `${activeFamilyRequest.contactName}: ${activeFamilyRequest.title}`,
+      label: `Family: ${activeFamilyRequest.title}`,
       amount: getFamilyRequestRemaining(activeFamilyRequest),
     });
   }
@@ -801,7 +843,7 @@ function triggerPhoneNotification() {
     return;
   }
 
-  playGameSound("notification");
+  playGameSound("notification", { cooldownMilliseconds: 300 });
   isNotificationShaking.value = false;
   window.clearTimeout(notificationShakeTimer);
 
@@ -853,7 +895,7 @@ function answerIncomingCall(call = displayedCall.value) {
     return;
   }
 
-  voiceNoteAudio = new Audio(call.audioUrl);
+  voiceNoteAudio = createManagedAudio(call.audioUrl);
   voiceNoteAudio.volume = props.soundMuted
     ? 0
     : Math.min(0.72, 0.68 * props.soundVolume);
@@ -1108,10 +1150,16 @@ function openApp(appId) {
 }
 
 function openMessageContact(contactId) {
+  if(contactId==='mutiu-illegal'){clearMessageContactUnread(contactId);emit('heist-action',{op:'status'});}
+  if(contactId==='government')emit('government-action',{op:'read'});
+  contactId = familyContactId(contactId);
+  if (contactId === "stock-adviser") emit("read-stock-adviser");
+  if (contactId === "realtor") clearMessageContactUnread("realtor");
   activeMessageContactId.value = contactId;
 
-  if (contactId === "sister") {
-    clearMessageContactUnread("sister");
+  if (contactId === "family-group") {
+    clearMessageContactUnread("family-group");
+    FAMILY_MESSAGE_CONTACT_IDS.forEach(clearMessageContactUnread);
     emit("objective-event", {
       type: "welcome-read",
     });
@@ -1238,22 +1286,8 @@ function gameTimeIsNight() {
 }
 
 function callMutiu() {
-  const isNight = gameTimeIsNight();
-
-  if (isNight) {
-    mutiuReply.value =
-      "Good. Coast City. Atlantic Crown. We race now.";
-  } else {
-    mutiuReply.value = "Call me at night.";
-  }
-
-  emit("call-mutiu");
-
-  if (isNight) {
-    activeAppId.value = null;
-    activeMessageContactId.value = null;
-    isOpen.value = false;
-  }
+  activeAppId.value='messages';
+  openMessageContact('mutiu-illegal');
 }
 
 function submitMegapayPayment() {
@@ -1344,6 +1378,9 @@ function repayLoan() {
     <div
       v-if="isOpen || displayedCall"
       class="game-phone__device"
+      :class="{ 'phone-skin': Boolean(equippedPhone) }"
+      :data-phone-model="equippedPhone?.id"
+      :style="equippedPhoneStyle"
     >
       <button
         class="game-phone__side-button"
@@ -1523,8 +1560,18 @@ function repayLoan() {
             </button>
           </nav>
 
+          <CareerPanel v-if="activeApp.id === 'me'" :state="careerState" :minute="careerMinute" :occupied="careerOccupied" :busy="careerBusy" :error="careerError" :bars="{health,energy,fuel,damage,intoxication}" @action="$emit('career-action',$event)" />
+          <HousingApp v-else-if="activeApp.id === 'housing'" :view="housingView" :busy="housingBusy" :error="housingError" @action="$emit('housing-action',$event)" />
+          <BigPeopleClub v-else-if="activeApp.id === 'bpc'" :wealth="netWorth" :player-name="playerName" />
+          <CustomizeShop
+            v-else-if="activeApp.id === 'customize'"
+            :vehicle="customizationVehicle"
+            :state="customizationState"
+            :money="money"
+            @apply="emit('customize-vehicle', $event)"
+          />
           <div
-            v-if="activeApp.id === 'find-job'"
+            v-else-if="activeApp.id === 'find-job'"
             class="game-phone__jobs"
           >
             <header class="game-phone__messages-heading">
@@ -1780,6 +1827,13 @@ function repayLoan() {
               </section>
 
               <div class="game-phone__conversation-list">
+                <button v-if="government" class="game-phone__conversation" type="button" @click="openMessageContact('government')"><span class="game-phone__contact-avatar game-phone__contact-avatar--bank"><i class="fa-solid fa-landmark" aria-hidden="true" /></span><span class="game-phone__conversation-details"><strong>Government</strong><small>{{government.sunday?'Sunday election · cast your vote':government.messages.at(-1)?.text||'Elections, taxes and government wages'}}</small></span><span v-if="governmentUnread" class="game-phone__conversation-badge">{{governmentUnread}}</span></button>
+                <button class="game-phone__conversation" type="button" @click="openMessageContact('stock-adviser')">
+                  <span class="game-phone__contact-avatar game-phone__contact-avatar--bank"><i class="fa-solid fa-chart-line" aria-hidden="true" /></span>
+                  <span class="game-phone__conversation-details"><strong>Stock Adviser</strong><small>{{ stockAdviser.messages.at(-1)?.text ?? 'Regular stock updates and subscription' }}</small></span>
+                  <span v-if="adviserUnreadCount" class="game-phone__conversation-badge">{{ adviserUnreadCount }}</span>
+                  <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
+                </button>
                 <button
                   v-if="currentJob || routeStatus === 'selecting'"
                   class="game-phone__conversation"
@@ -1814,188 +1868,67 @@ function repayLoan() {
                   <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
                 </button>
 
+<button class="game-phone__conversation" type="button" @click="openMessageContact('mutiu-illegal')">
+ <span class="game-phone__contact-avatar game-phone__contact-avatar--work"><i class="fa-solid fa-user-secret" aria-hidden="true" /></span>
+ <span class="game-phone__conversation-details"><strong>Mr-Wire</strong><small>Hustler · {{heistView?.available?'Bank job available':'Bank job status'}}</small></span>
+ <span v-if="isMessageContactUnread('mutiu-illegal')" class="game-phone__conversation-badge">1</span>
+</button>
 <button class="game-phone__conversation" type="button" @click="openMessageContact('realtor')">
                   <span class="game-phone__contact-avatar game-phone__contact-avatar--work"><i class="fa-solid fa-house-circle-check" /></span>
                   <span class="game-phone__conversation-details"><strong>Realtor</strong><small>Manage owned homes and tenants</small></span>
-                  <i class="fa-solid fa-chevron-right" />
+                  <span v-if="isMessageContactUnread('realtor')" class="game-phone__conversation-badge">1</span>
+                  <i v-else class="fa-solid fa-chevron-right" />
                 </button>
 
-                <button class="game-phone__conversation" type="button" @click="openMessageContact('sister')">
-                  <span class="game-phone__contact-avatar game-phone__contact-avatar--family">
-                    <img :src="CHARACTER_DEFINITIONS.sister.portraitUrl" alt="" />
-                  </span>
-                  <span class="game-phone__conversation-details">
-                    <strong>Your Sister</strong>
-                    <small v-if="['active', 'late'].includes(lifeObligations.schoolFees.status)">
-                      School fees: {{ formatMoney(lifeObligations.schoolFees.remainingAmount) }}
-                    </small>
-                    <small v-else>Family messages</small>
-                  </span>
-                  <span v-if="isMessageContactUnread('sister')" class="game-phone__conversation-badge">1</span>
-                  <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
-                </button>
-
-                <button
-                  v-for="contact in FAMILY_MESSAGE_CONTACTS"
-                  :key="contact.id"
-                  class="game-phone__conversation"
-                  type="button"
-                  @click="openMessageContact(contact.id)"
-                >
-                  <span class="game-phone__contact-avatar game-phone__contact-avatar--family">{{ contact.initials }}</span>
-                  <span class="game-phone__conversation-details">
-                    <strong>{{ contact.name }}</strong>
-                    <small v-if="getFamilyRequest(contact.id)?.status === 'paid'">Request completed</small>
-                    <small v-else-if="['active', 'late'].includes(getFamilyRequest(contact.id)?.status)">
-                      {{ getFamilyRequest(contact.id).title }}: {{ formatMoney(getFamilyRequestRemaining(getFamilyRequest(contact.id))) }}
-                    </small>
-                    <small v-else>{{ contact.preview }}</small>
-                  </span>
-                  <span v-if="isMessageContactUnread(contact.id)" class="game-phone__conversation-badge">1</span>
+                <button class="game-phone__conversation" type="button" @click="openMessageContact('family-group')">
+                  <span class="game-phone__contact-avatar game-phone__contact-avatar--family"><i class="fa-solid fa-users" aria-hidden="true" /></span>
+                  <span class="game-phone__conversation-details"><strong>Family group chat</strong><small>Family messages, school fees and requests</small></span>
+                  <span v-if="isMessageContactUnread('family-group')" class="game-phone__conversation-badge">1</span>
                   <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
                 </button>
               </div>
             </template>
 
-            <template v-else-if="activeMessageContactId === 'sister'">
-              <header class="game-phone__messages-heading">
-                <span class="game-phone__eyebrow">FAMILY</span>
-                <strong>Your Sister</strong>
-                <small>Back home &middot; Online now</small>
-              </header>
-
-              <div class="game-phone__message-bubble">
-                You made it! I am glad you reached Lagos safely. How is the
-                room? Mum said I should tell you not to rush yourself.
-                <time>Today</time>
+            <template v-else-if="activeMessageContactId === 'government' && government"><GovernmentPanel :state="government" :busy="governmentBusy" :error="governmentError" @action="$emit('government-action',$event)" /></template>
+            <template v-else-if="activeMessageContactId === 'stock-adviser'">
+              <div class="game-phone__message-bubble">Hi {{ playerName }}, subscribe to regular stock updates. I will message you about rising and falling stocks, with suggestions on when to consider buying or selling.</div>
+            <article class="game-phone__stock-card">
+              <strong>Stock Adviser</strong>
+              <small>{{ formatMoney(STOCK_ADVISER_PRICE) }} every {{ STOCK_ADVISER_DAYS }} game days until cancelled. Rising and falling stock tips delivered in Messages.</small>
+              <small v-if="adviserActive">{{ stockAdviser.autoRenew ? 'Next automatic renewal:' : 'Cancelled. Access ends:' }} day {{ stockAdviser.untilDay }}.</small>
+              <small v-else-if="stockAdviser.paymentPending">Renewal awaiting funds. Updates paused; payment retries each game day until you cancel.</small>
+              <small v-else-if="money < STOCK_ADVISER_PRICE">You need {{ formatMoney(STOCK_ADVISER_PRICE) }} to subscribe.</small>
+              <div class="game-phone__stock-actions">
+                <button type="button" :disabled="adviserActive ? stockAdviser.autoRenew : money < STOCK_ADVISER_PRICE" @click="$emit('subscribe-stock-adviser')">{{ adviserActive ? (stockAdviser.autoRenew ? 'Subscribed' : 'Resume renewal') : stockAdviser.untilDay ? 'Renew' : 'Subscribe' }}</button>
+                <button v-if="stockAdviser.autoRenew" type="button" @click="$emit('cancel-stock-adviser')">Cancel subscription</button>
+              </div>
+            </article>
+              <div v-for="message in stockAdviser.messages" :key="message.id" class="game-phone__message-bubble">
+                {{ message.text }}<time>Day {{ message.day }}</time>
               </div>
 
-              <div class="game-phone__message-bubble">
-                When you are ready, check Find Job on your phone. There should
-                be Danfo and BRT driving work available. Call me after your
-                first day.
-                <time>Today</time>
-              </div>
-
-              <div
-                v-if="
-                  ['active', 'late', 'paid'].includes(
-                    lifeObligations.schoolFees.status,
-                  )
-                "
-                class="game-phone__message-bubble"
-              >
-                <template v-if="lifeObligations.schoolFees.status === 'paid'">
-                  The school confirmed the full payment. Thank you so much.
-                  I will make you proud.
-                </template>
-                <template v-else-if="lifeObligations.schoolFees.status === 'late'">
-                  The deadline has passed, but the school will still accept
-                  payment. We have
-                  {{ formatMoney(lifeObligations.schoolFees.remainingAmount) }}
-                  left.
-                </template>
-                <template v-else>
-                  My school fees are due by Day
-                  {{ lifeObligations.schoolFees.deadlineDay }}. The total is
-                  {{ formatMoney(lifeObligations.schoolFees.amount) }}.
-                  Anything you can send through MegaPay will help.
-                </template>
-                <time>
-                  Day {{ lifeObligations.schoolFees.requestedDay }}
-                </time>
-              </div>
-
-              <div
-                v-if="
-                  lifeObligations.schoolFees.status === 'active' &&
-                  lifeObligations.schoolFees.reminderCount > 0
-                "
-                class="game-phone__message-bubble"
-              >
-                <template
-                  v-if="lifeObligations.schoolFees.daysUntilDeadline <= 14"
-                >
-                  Please, the deadline is getting close now. The bursar keeps
-                  asking me about the remaining
-                  {{ formatMoney(lifeObligations.schoolFees.remainingAmount) }}.
-                  I know things are not easy there, but I am worried.
-                </template>
-                <template
-                  v-else-if="lifeObligations.schoolFees.paidAmount > 0"
-                >
-                  Thank you for what you already sent. The school recorded it,
-                  but there is still
-                  {{ formatMoney(lifeObligations.schoolFees.remainingAmount) }}
-                  remaining. Please do not forget me when you can.
-                </template>
-                <template v-else>
-                  I do not want to disturb you, but the school asked about the
-                  fees again today. We still have
-                  {{ Math.max(0, lifeObligations.schoolFees.daysUntilDeadline) }}
-                  days. Please remember me when work starts going well.
-                </template>
-                <time>Day {{ currentDay }}</time>
-              </div>
-
-              <div v-if="['active', 'late'].includes(lifeObligations.schoolFees.status)" class="game-phone__obligation-actions">
-                <button
-                  type="button"
-                  :disabled="money < Math.min(25000, lifeObligations.schoolFees.remainingAmount)"
-                  @click="$emit('pay-school-fees', Math.min(25000, lifeObligations.schoolFees.remainingAmount))"
-                >
-                  SEND {{ formatMoney(Math.min(25000, lifeObligations.schoolFees.remainingAmount)) }}
-                </button>
-                <button
-                  type="button"
-                  :disabled="money < lifeObligations.schoolFees.remainingAmount"
-                  @click="$emit('pay-school-fees', lifeObligations.schoolFees.remainingAmount)"
-                >
-                  PAY BALANCE
-                </button>
-              </div>
+              <div class="game-phone__stock-actions"><button type="button" @click="openApp('stocks')">Open Stocks</button></div>
             </template>
-
-            <template v-else-if="FAMILY_MESSAGE_CONTACT_IDS.includes(activeMessageContactId)">
-              <header class="game-phone__messages-heading">
-                <span class="game-phone__eyebrow">FAMILY</span>
-                <strong>{{ FAMILY_MESSAGE_CONTACTS.find((contact) => contact.id === activeMessageContactId)?.name }}</strong>
-                <small>Family messages, requests, and gifts</small>
-              </header>
-
-              <template v-if="getFamilyRequest(activeMessageContactId)">
+            <template v-else-if="activeMessageContactId === 'family-group'">
+              <div class="game-phone__message-bubble">Hi {{ playerName }}, welcome to Lagos! We hope you are settling into your room. Check Find Job on your phone when you are ready to work.</div>
+              <div v-if="['active','late','paid'].includes(lifeObligations.schoolFees.status)" class="game-phone__message-bubble">
+                <template v-if="lifeObligations.schoolFees.status === 'paid'">Hi {{ playerName }}, the school fees are paid. Thank you for helping!</template>
+                <template v-else>Hi {{ playerName }}, I need {{ formatMoney(lifeObligations.schoolFees.remainingAmount) }} for my school fees. The deadline is day {{ lifeObligations.schoolFees.deadlineDay }}.<span v-if="lifeObligations.schoolFees.status === 'late'"> The deadline has passed, but payment is still needed.</span></template>
+                <time>Day {{ lifeObligations.schoolFees.requestedDay }}</time>
+              </div>
+              <div v-if="['active','late'].includes(lifeObligations.schoolFees.status)" class="game-phone__obligation-actions">
+                <button type="button" :disabled="money < Math.min(25000, lifeObligations.schoolFees.remainingAmount)" @click="$emit('pay-school-fees', Math.min(25000, lifeObligations.schoolFees.remainingAmount))">Send {{ formatMoney(Math.min(25000, lifeObligations.schoolFees.remainingAmount)) }}</button>
+                <button type="button" :disabled="money < lifeObligations.schoolFees.remainingAmount" @click="$emit('pay-school-fees', lifeObligations.schoolFees.remainingAmount)">Pay balance</button>
+              </div>
+              <template v-for="request in familyRequestEntries.filter(entry => entry.status !== 'locked')" :key="request.id">
                 <div class="game-phone__message-bubble">
-                  <template v-if="getFamilyRequest(activeMessageContactId).status === 'paid'">
-                    {{ getFamilyRequest(activeMessageContactId).thanks }}
-                  </template>
-                  <template v-else-if="['active', 'late'].includes(getFamilyRequest(activeMessageContactId).status)">
-                    {{ getFamilyRequest(activeMessageContactId).message }}
-                    The remaining balance is {{ formatMoney(getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId))) }}.
-                  </template>
-                  <template v-else>
-                    {{ FAMILY_MESSAGE_CONTACTS.find((contact) => contact.id === activeMessageContactId)?.greeting }}
-                  </template>
-                  <time>Day {{ getFamilyRequest(activeMessageContactId).requestedDay ?? currentDay }}</time>
+                  Hi {{ playerName }}, {{ request.status === 'paid' ? request.thanks : request.message }}
+                  <template v-if="['active','late'].includes(request.status)">Remaining: {{ formatMoney(getFamilyRequestRemaining(request)) }}. Due day {{ request.deadlineDay }}.</template>
+                  <time>Day {{ request.requestedDay }}</time>
                 </div>
-
-                <div
-                  v-if="['active', 'late'].includes(getFamilyRequest(activeMessageContactId).status)"
-                  class="game-phone__obligation-actions"
-                >
-                  <button
-                    type="button"
-                    :disabled="money < Math.min(25000, getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId)))"
-                    @click="$emit('pay-family-request', Math.min(25000, getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId))))"
-                  >
-                    SEND {{ formatMoney(Math.min(25000, getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId)))) }}
-                  </button>
-                  <button
-                    type="button"
-                    :disabled="money < getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId))"
-                    @click="$emit('pay-family-request', getFamilyRequestRemaining(getFamilyRequest(activeMessageContactId)))"
-                  >
-                    PAY BALANCE
-                  </button>
+                <div v-if="request.id === lifeObligations.familyRequests?.activeId && ['active','late'].includes(request.status)" class="game-phone__obligation-actions">
+                  <button type="button" :disabled="money < Math.min(25000,getFamilyRequestRemaining(request))" @click="$emit('pay-family-request',Math.min(25000,getFamilyRequestRemaining(request)))">Send {{ formatMoney(Math.min(25000,getFamilyRequestRemaining(request))) }}</button>
+                  <button type="button" :disabled="money < getFamilyRequestRemaining(request)" @click="$emit('pay-family-request',getFamilyRequestRemaining(request))">Pay balance</button>
                 </div>
               </template>
             </template>
@@ -2003,24 +1936,7 @@ function repayLoan() {
 <template v-else-if="activeMessageContactId === 'realtor'">
               <header class="game-phone__messages-heading"><span class="game-phone__eyebrow">PROPERTY</span><strong>Your Realtor</strong><small>List vacant owned homes and manage tenants</small></header>
               <div v-for="message in [...(propertyState.rentals?.messages ?? [])].reverse()" :key="message.day + message.text" class="game-phone__message-bubble">{{ message.text }}<time>Day {{ message.day }}</time></div>
-              <section v-for="property in propertyCatalogue.filter(p => propertyState.ownedPropertyIds.includes(p.id))" :key="property.id" class="game-phone__rental-card">
-                <strong>{{ property.name }}</strong>
-                <small v-if="propertyState.activeHomeId === property.id">CURRENT HOME &middot; Move out before listing</small>
-                <template v-else-if="!propertyState.rentals?.listings?.[property.id]">
-                  <input v-model.number="rentalAmounts[property.id]" type="number" min="1000" step="1000" placeholder="Weekly rent">
-                  <button type="button" @click="$emit('list-property-rental', { propertyId: property.id, weeklyRent: rentalAmounts[property.id] })">PUT ON MARKET</button>
-                </template>
-                <template v-else>
-                  <small>{{ propertyState.rentals.listings[property.id].status.toUpperCase() }} &middot; {{ formatMoney(propertyState.rentals.listings[property.id].weeklyRent) }}/week &middot; {{ propertyState.rentals.listings[property.id].chance }}% tenant chance</small>
-                  <button v-if="propertyState.rentals.listings[property.id].status === 'listed'" type="button" @click="$emit('remove-property-rental', property.id)">REMOVE LISTING</button>
-                  <div v-if="propertyState.rentals.listings[property.id].status === 'late'" class="game-phone__rental-actions">
-                    <button type="button" @click="$emit('resolve-late-rent', { propertyId: property.id, action: 'patient' })">BE PATIENT</button>
-                    <button type="button" @click="$emit('resolve-late-rent', { propertyId: property.id, action: 'remind' })">SEND REMINDER</button>
-                    <button type="button" @click="$emit('resolve-late-rent', { propertyId: property.id, action: 'evict' })">EVICT</button>
-                  </div>
-                </template>
-              </section>
-              <div v-if="!propertyState.ownedPropertyIds.length" class="game-phone__empty-app"><i class="fa-solid fa-house" /><strong>You do not own a rentable home</strong><small>The starter house belongs to your landlord.</small></div>
+              <button type="button" @click="openApp('housing')">Open Housing to buy, move or manage rentals</button>
             </template>
 
             <template v-else-if="activeMessageContactId === 'megapay-bank'">
@@ -2295,24 +2211,7 @@ function repayLoan() {
             </template>
 
             <template v-else-if="activeMessageContactId === 'mutiu-illegal'">
-              <header class="game-phone__messages-heading">
-                <span class="game-phone__eyebrow">PRIVATE CONTACT</span>
-                <strong>Mutiu Illegal</strong>
-                <small>Coast City street racing</small>
-              </header>
-
-              <div class="game-phone__message-bubble">
-                {{ mutiuReply }}
-              </div>
-
-              <button
-                class="game-phone__call-button"
-                type="button"
-                @click="callMutiu"
-              >
-                <i class="fa-solid fa-phone" aria-hidden="true" />
-                Call Mutiu
-              </button>
+              <HeistPanel :minute="heistMinute" :view="heistView" :busy="heistBusy" :error="heistError" :player-name="playerName" @action="$emit('heist-action',$event)" />
             </template>
           </div>
 
@@ -2373,6 +2272,8 @@ function repayLoan() {
             v-else-if="activeApp.id === 'music'"
             class="game-phone__music"
           >
+            <label class="game-phone__volume-control"><span>Music volume <strong>{{ Math.round(musicAudioSettings.volume * 100) }}%</strong></span><input type="range" min="0" max="1" step="0.05" :value="musicAudioSettings.volume" aria-label="Music volume" @input="setMusicSettings({ ...musicAudioSettings, volume: Number($event.target.value) })" /></label>
+            <button class="game-phone__mute-control" type="button" role="switch" aria-label="Music" :aria-checked="!musicAudioSettings.muted" @click="setMusicSettings({ ...musicAudioSettings, muted: !musicAudioSettings.muted })"><i class="fa-solid fa-music" aria-hidden="true" /><span><strong>{{ musicAudioSettings.muted ? 'Music muted' : 'Music on' }}</strong></span><ToggleIcon :checked="!musicAudioSettings.muted" /></button>
             <header class="game-phone__music-now">
               <span class="game-phone__music-art">
                 <i class="fa-solid fa-music" aria-hidden="true" />
@@ -2606,14 +2507,14 @@ function repayLoan() {
             <header>
               <i class="fa-solid fa-volume-high" aria-hidden="true" />
               <div>
-                <h3>Sound</h3>
-                <small>Vehicle audio</small>
+                <h3>Game sounds</h3>
+                <small>Engine, horn and sound effects</small>
               </div>
             </header>
 
             <label class="game-phone__volume-control">
               <span>
-                Master volume
+                Game sounds volume
                 <strong>{{ Math.round(soundVolume * 100) }}%</strong>
               </span>
               <input
@@ -2622,12 +2523,12 @@ function repayLoan() {
                 max="100"
                 step="1"
                 :value="Math.round(soundVolume * 100)"
-                aria-label="Master sound volume"
+                aria-label="Game sounds volume"
                 @input="changeSoundVolume"
               >
             </label>
 
-            <button role="switch" :aria-checked="!soundMuted" aria-label="Sound"
+            <button role="switch" :aria-checked="!soundMuted" aria-label="Game sounds"
               class="game-phone__mute-control"
               type="button"
               @click="toggleSoundMuted"
@@ -2782,6 +2683,7 @@ function repayLoan() {
               </div>
             </header>
 
+            <button role="switch" :aria-checked="aiTrafficEnabled" class="game-phone__debug-action" @click="$emit('toggle-ai-traffic')"><i class="fa-solid fa-car"/><span><strong>AI traffic</strong><small>Remove or restore AI vehicles. Online players stay.</small></span><ToggleIcon :checked="aiTrafficEnabled" /></button>
             <button role="switch" :aria-checked="debugVisible" aria-label="Debug view"
               type="button"
               :class="{ 'game-phone__debug-action--active': debugVisible }"
@@ -3097,7 +2999,7 @@ function repayLoan() {
             </article>
 
             <small v-if="ownedVehicleIds.length && !homeParkingAvailable">
-              Park at home on X7 Y4 to switch into your newest car.
+              Park in your home's labelled space to switch into your newest car.
             </small>
             <small v-else-if="homeParkingAvailable && ownedVehicleIds.length">
               Home parking active. Your newest purchased car is selected automatically.
@@ -3115,11 +3017,17 @@ function repayLoan() {
                 Invested {{ formatMoney(stockPortfolioValue) }} &middot; Current {{ formatMoney(stockPortfolioCurrentValue) }}
               </small>
             </header>
+            <p class="game-phone__market-explanation">Prices update each game day from company revenue and costs. More profitable patronage supports prices; weaker results can lower them. Gains stay in your shares until you sell.</p>
+
             <article v-for="company in stockMarket" :key="company.id" class="game-phone__stock-card">
               <div class="game-phone__stock-heading">
                 <span><b>{{ company.symbol }}</b><small>{{ company.name }}</small></span>
                 <span><b>{{ formatMoney(company.price) }}</b><small :class="company.changePercent >= 0 ? 'is-gain' : 'is-loss'">{{ company.changePercent >= 0 ? '+' : '' }}{{ company.changePercent.toFixed(1) }}%</small></span>
               </div>
+              <small>
+                {{ company.sector }}
+              </small>
+              <small>Last settled day: revenue {{ formatMoney(company.revenue) }} &middot; costs {{ formatMoney(company.costs) }} &middot; profit {{ formatMoney(company.profit) }}</small>
               <small>
                 You own {{ company.quantity }} &middot; Invested {{ formatMoney(company.investedAmount ?? company.value) }} &middot; Current {{ formatMoney(company.currentAmount ?? company.value) }}
               </small>
@@ -3155,7 +3063,7 @@ function repayLoan() {
             <div v-if="currentJob !== 'moto-eazi'" class="game-phone__empty-app">
               <i class="fa-solid fa-house" aria-hidden="true" />
               <strong>Private car required</strong>
-              <small>Park at home on X7 Y4 to change into your purchased car.</small>
+              <small>Park in your home's labelled space to change into your purchased car.</small>
             </div>
 
             <article
@@ -3283,7 +3191,7 @@ function repayLoan() {
           <article><small>Next activation</small><strong>Day {{ lifeObligations.familyRequests?.nextActivationDay ?? "?" }}</strong></article>
         </div>
         <div class="game-phone__family-request-list">
-          <article v-for="entry in familyRequestEntries" :key="entry.id"><div><strong>{{ entry.contactName }}</strong><span>{{ entry.title }}</span></div><b :data-status="entry.status">{{ entry.status }}</b><small>Paid {{ formatMoney(entry.paidAmount ?? 0) }} of {{ formatMoney(entry.amount ?? 0) }}</small></article>
+          <article v-for="entry in familyRequestEntries" :key="entry.id"><div><strong>Family group chat</strong><span>{{ entry.title }}</span></div><b :data-status="entry.status">{{ entry.status }}</b><small>Paid {{ formatMoney(entry.paidAmount ?? 0) }} of {{ formatMoney(entry.amount ?? 0) }}</small></article>
           <p v-if="familyRequestEntries.length === 0">No family requests are registered.</p>
         </div>
         <button type="button" class="game-phone__modal-close" @click="familyDebugVisible = false">Close inspector</button>
@@ -3321,14 +3229,14 @@ function repayLoan() {
 
 
 .game-phone__screen-modal { position: fixed; inset: 0; z-index: 9999999; display: grid; place-items: center; box-sizing: border-box; padding: 24px; overflow-y: auto; background: rgb(8 15 31 / 78%); font-family: "Basic", sans-serif; backdrop-filter: blur(5px); }
-.game-phone__screen-modal-card { box-sizing: border-box; width: min(680px, 100%); max-height: min(780px, calc(100vh - 48px)); padding: 22px; overflow-y: auto; border: 3px solid #14213d; border-radius: 24px; background: #fff8dc; color: #14213d; box-shadow: 12px 12px 0 #14213d; }
+.game-phone__screen-modal-card { box-sizing: border-box; width: min(680px, 100%); max-height: min(780px, calc(100vh - 48px)); padding: 22px; overflow-y: auto; border: 1px solid rgb(23 33 58 / 16%); border-radius: 24px; background: #fff8dc; color: #14213d; box-shadow: 0 2px 8px rgb(23 33 58 / 10%); }
 .game-phone__screen-modal-card > header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .game-phone__screen-modal-card > header span { display: grid; gap: 3px; }
 .game-phone__screen-modal-card > header small { color: #d8612c; font-weight: 900; letter-spacing: .12em; }
 .game-phone__screen-modal-card > header strong { font-size: 28px; }
-.game-phone__screen-modal-card > header button { display: grid; width: 42px; height: 42px; place-items: center; border: 3px solid #14213d; border-radius: 50%; background: #ff5c69; color: #14213d; font-size: 20px; }
+.game-phone__screen-modal-card > header button { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgb(23 33 58 / 16%); border-radius: 50%; background: #ff5c69; color: #14213d; font-size: 20px; }
 .game-phone__family-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-bottom: 16px; }
-.game-phone__family-summary article, .game-phone__family-request-list > article { padding: 12px; border: 2px solid #14213d; border-radius: 14px; background: #fff; }
+.game-phone__family-summary article, .game-phone__family-request-list > article { padding: 12px; border: 1px solid rgb(23 33 58 / 16%); border-radius: 14px; background: #fff; }
 .game-phone__family-summary article { display: grid; gap: 5px; }
 .game-phone__family-summary small, .game-phone__family-request-list small { color: #536078; }
 .game-phone__family-request-list { display: grid; gap: 9px; }
@@ -3338,7 +3246,7 @@ function repayLoan() {
 .game-phone__family-request-list > article > b[data-status="active"] { background: #ffd43b; }
 .game-phone__family-request-list > article > b[data-status="completed"] { background: #99df78; }
 .game-phone__family-request-list > article > small { grid-column: 1/-1; }
-.game-phone__modal-close { width: 100%; margin-top: 18px; padding: 12px; border: 3px solid #14213d; border-radius: 13px; background: #ffd43b; color: #14213d; font: inherit; font-weight: 900; }
+.game-phone__modal-close { width: 100%; margin-top: 18px; padding: 12px; border: 1px solid rgb(23 33 58 / 16%); border-radius: 13px; background: #ffd43b; color: #14213d; font: inherit; font-weight: 900; }
 .game-phone__debug-danger { background: #ffe6e8 !important; color: #9d1821 !important; }
 .game-phone__clear-warning { width: min(520px,100%); text-align: center; }
 .game-phone__clear-warning > i { color: #e53945; font-size: 46px; }
@@ -3346,7 +3254,7 @@ function repayLoan() {
 .game-phone__clear-warning h2 { margin: 8px 0; font-size: 30px; }
 .game-phone__clear-warning p { line-height: 1.55; }
 .game-phone__clear-warning > div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-.game-phone__clear-warning button { padding: 12px; border: 3px solid #14213d; border-radius: 13px; background: #fff; color: #14213d; font: inherit; font-weight: 900; }
+.game-phone__clear-warning button { padding: 12px; border: 1px solid rgb(23 33 58 / 16%); border-radius: 13px; background: #fff; color: #14213d; font: inherit; font-weight: 900; }
 .game-phone__clear-warning .game-phone__confirm-clear { background: #e53945; color: #fff; }
 @media (max-width:620px) { .game-phone__family-summary, .game-phone__clear-warning > div { grid-template-columns: 1fr; } }
 
@@ -3399,7 +3307,7 @@ function repayLoan() {
   border-left: 4px solid #9b7b2f;
   border-radius: 7px;
   background: #ffffff;
-  box-shadow: 0 3px 9px rgb(32 44 55 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__goal--tracked {
@@ -3542,7 +3450,7 @@ function repayLoan() {
   border-left: 4px solid #987a35;
   border-radius: 7px;
   background: #ffffff;
-  box-shadow: 0 3px 9px rgb(25 39 52 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__obligation-card--family {
@@ -3610,7 +3518,7 @@ function repayLoan() {
   border: 1px solid rgb(202 145 230 / 35%);
   border-radius: 16px;
   background: linear-gradient(145deg, #713895, #252243);
-  box-shadow: 0 8px 20px rgb(0 0 0 / 25%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   text-align: center;
 }
 
@@ -3623,7 +3531,7 @@ function repayLoan() {
   border-radius: 50%;
   color: #32143d;
   background: linear-gradient(145deg, #f4c85b, #d776da);
-  box-shadow: 0 0 0 5px rgb(255 255 255 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font-size: 23px;
 }
 
@@ -3717,7 +3625,7 @@ function repayLoan() {
   border-radius: 9px;
   color: #17223f;
   background: #ffd43b;
-  box-shadow: 0 3px 0 #17223f;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font: inherit;
   font-size: 8px;
   font-weight: 900;
@@ -3785,7 +3693,7 @@ function repayLoan() {
   border-radius: 20px;
   background: transparent;
   cursor: pointer;
-  filter: drop-shadow(0 6px 8px rgb(0 0 0 / 42%));
+  filter: none;
 }
 
 .game-phone__launcher:hover,
@@ -3801,11 +3709,11 @@ function repayLoan() {
   width: 76px;
   height: 76px;
   place-items: center;
-  border: 4px solid #14213d;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 20px;
   color: #ffffff;
   background: #2f80ed;
-  box-shadow: 5px 5px 0 rgb(20 33 61 / 70%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   cursor: pointer;
 }
 
@@ -3836,8 +3744,7 @@ function repayLoan() {
   border-radius: 38px;
   background: linear-gradient(145deg, #20252b, #090b0e);
   box-shadow:
-    0 20px 48px rgb(0 0 0 / 52%),
-    inset 0 0 0 1px rgb(255 255 255 / 8%);
+    none;
 }
 
 .game-phone__speaker {
@@ -3948,7 +3855,7 @@ function repayLoan() {
   border-radius: 14px;
   color: #ffffff;
   font-size: 22px;
-  box-shadow: 0 3px 7px rgb(0 0 0 / 22%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 @keyframes game-phone-notification-shake {
@@ -4033,6 +3940,8 @@ function repayLoan() {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
+
+.game-phone__app-screen > .bpc { flex: 1 1 0; overflow: hidden; }
 
 .game-phone__app-header {
   display: grid;
@@ -4176,7 +4085,7 @@ function repayLoan() {
   border: 1px solid #ced7de;
   border-radius: 12px;
   background: #ffffff;
-  box-shadow: 0 3px 8px rgb(20 35 48 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__inventory-list article > img {
@@ -4348,10 +4257,10 @@ function repayLoan() {
   gap: 8px;
   margin: 10px 0 12px;
   padding: 10px;
-  border: 2px solid #14213d;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 14px;
   background: #fff7db;
-  box-shadow: 0 4px 0 #14213d;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__traffic-report > span:nth-child(2) {
@@ -4368,12 +4277,12 @@ function repayLoan() {
 .game-phone__traffic-report button {
   grid-column: 1 / -1;
   min-height: 38px;
-  border: 2px solid #14213d;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 10px;
   background: #ffd43b;
   color: #14213d;
   font: 900 11px Basic, sans-serif;
-  box-shadow: 0 3px 0 #14213d;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__traffic-report button:disabled {
@@ -4576,7 +4485,7 @@ function repayLoan() {
   color: #21352a;
   font-size: 11px;
   line-height: 1.4;
-  box-shadow: 0 4px 12px rgb(29 80 48 / 9%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__message-bubble time {
@@ -4597,7 +4506,7 @@ function repayLoan() {
     radial-gradient(circle at top right, rgb(255 255 255 / 17%), transparent 42%),
     linear-gradient(135deg, #141c27, #273b4d);
   color: #ffffff;
-  box-shadow: 0 7px 18px rgb(12 24 35 / 24%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__lease-card span {
@@ -4799,7 +4708,7 @@ function repayLoan() {
   overflow-y: auto;
   border-radius: 10px;
   background: #ffffff;
-  box-shadow: 0 8px 22px rgb(0 0 0 / 35%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   z-index: 4;
 }
 
@@ -4845,7 +4754,7 @@ function repayLoan() {
   padding: 10px;
   border-radius: 13px;
   background: #ffffff;
-  box-shadow: 0 3px 10px rgb(23 48 77 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__vehicle-card > span:nth-child(2),
@@ -4895,7 +4804,7 @@ function repayLoan() {
   align-items: center;
   justify-content: space-between;
   padding: 9px 10px;
-  border: 2px solid #14213d;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 11px;
   color: #14213d;
   background: #fff3bf;
@@ -4953,7 +4862,7 @@ function repayLoan() {
   min-width: 22px;
   height: 22px;
   place-items: center;
-  border: 2px solid #14213d;
+  border: 1px solid rgb(23 33 58 / 16%);
   border-radius: 50%;
   background: #ffd83d;
   font-weight: 900;
@@ -4993,13 +4902,13 @@ function repayLoan() {
   border: 8px solid #25303a;
   border-radius: 50%;
   background: #17222c;
-  box-shadow: inset 0 0 0 2px #ffffff;
+  box-shadow: none;
 }
 
 .game-phone__navigation-compass i {
   color: #df3d35;
   font-size: 55px;
-  filter: drop-shadow(0 2px 0 #671713);
+  filter: none;
   transition: transform 100ms linear;
 }
 
@@ -5146,7 +5055,7 @@ function repayLoan() {
   padding: 0 12px;
   border-radius: 999px;
   background: rgb(255 255 255 / 10%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
+  box-shadow: none;
   transform: translateX(-50%);
   z-index: 4;
 }
@@ -5190,7 +5099,7 @@ function repayLoan() {
   border-radius: 18px;
   background: linear-gradient(145deg, #172331, #28445f);
   color: #ffffff;
-  box-shadow: 0 8px 20px rgb(15 35 52 / 20%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__repair-card span {
@@ -5258,7 +5167,7 @@ function repayLoan() {
     radial-gradient(circle at top right, rgb(92 183 255 / 35%), transparent 45%),
     linear-gradient(145deg, #0b3c89, #1769e0);
   color: #ffffff;
-  box-shadow: 0 9px 22px rgb(18 71 145 / 25%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__megapay-card span {
@@ -5308,7 +5217,7 @@ function repayLoan() {
   border-radius: 16px;
   color: #152346;
   background: #fff7dc;
-  box-shadow: 0 5px 0 #152346;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__megapay-payment header {
@@ -5356,7 +5265,7 @@ function repayLoan() {
   border-radius: 10px;
   color: #152346;
   background: #ffd83d;
-  box-shadow: 0 3px 0 #152346;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font: inherit;
   font-weight: 1000;
 }
@@ -5375,7 +5284,7 @@ function repayLoan() {
   border: 1px solid #d7e2ef;
   border-radius: 15px;
   background: #ffffff;
-  box-shadow: 0 3px 10px rgb(23 48 77 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__loan-card > span,
@@ -5442,7 +5351,7 @@ function repayLoan() {
   padding: 10px;
   border-radius: 13px;
   background: #ffffff;
-  box-shadow: 0 3px 10px rgb(23 48 77 / 8%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__megapay-summary small {
@@ -5550,12 +5459,12 @@ function repayLoan() {
   height: 112px;
   object-fit: contain;
   object-position: center bottom;
-  filter: drop-shadow(-8px 0 12px rgb(0 0 0 / 28%));
+  filter: none;
 }
 
 .game-phone__fine-card--impounded {
   background: linear-gradient(145deg, #571313, #a51717);
-  box-shadow: 0 0 0 3px rgb(204 36 36 / 18%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__fine-card span,
@@ -5683,7 +5592,7 @@ function repayLoan() {
 
 .game-phone__job-card--active {
   border-color: #35a365;
-  box-shadow: inset 0 0 0 1px #35a365;
+  box-shadow: none;
 }
 
 .game-phone__account-tabs {
@@ -5844,7 +5753,7 @@ function repayLoan() {
   border-radius: 16px;
   color: #17213b;
   background: #ffe274;
-  box-shadow: 0 4px 0 #17213b;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 .game-phone__coupon-wallet i { font-size: 24px; }
@@ -5853,7 +5762,7 @@ function repayLoan() {
 .game-phone__coupon-wallet > b { font-size: 18px; }
 
 .game-phone__stocks { display: grid; height: calc(100% - 43px); min-height: 0; box-sizing: border-box; align-content: start; gap: 12px; padding: 12px; overflow-y: auto; overscroll-behavior: contain; }
-.game-phone__stock-card { border: 3px solid #14213d; border-radius: 16px; background: #fffaf0; padding: 12px; box-shadow: 0 4px 0 #14213d; display: grid; gap: 9px; }
+.game-phone__stock-card { border: 1px solid rgb(23 33 58 / 16%); border-radius: 16px; background: #fffaf0; padding: 12px; box-shadow: 0 2px 8px rgb(23 33 58 / 10%); display: grid; gap: 9px; }
 .game-phone__stock-heading { display: flex; justify-content: space-between; gap: 10px; }
 .game-phone__stock-heading > span { display: grid; gap: 2px; }
 .game-phone__stock-heading > span:last-child { text-align: right; }
@@ -5861,14 +5770,17 @@ function repayLoan() {
 .game-phone__stock-heading .is-gain { color: #168a46; }
 .game-phone__stock-heading .is-loss { color: #d53535; }
 .game-phone__stock-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.game-phone__stock-actions button { border: 2px solid #14213d; border-radius: 10px; background: #ffd43b; color: #14213d; font: inherit; font-weight: 900; padding: 9px; }
+.game-phone__stock-actions button { border: 1px solid rgb(23 33 58 / 16%); border-radius: 10px; background: #ffd43b; color: #14213d; font: inherit; font-weight: 900; padding: 9px; }
 .game-phone__stock-actions button:last-child { background: #e8f1ff; }
 .game-phone__stock-actions button:disabled { opacity: 0.38; }
 
-.game-phone__rental-card { display:grid; gap:8px; margin:10px 0; padding:12px; border:3px solid #14213d; border-radius:14px; background:#fffaf0; box-shadow:3px 4px 0 #14213d; }
-.game-phone__rental-card input,.game-phone__rental-card button { min-height:38px; border:2px solid #14213d; border-radius:9px; padding:7px; font:inherit; }
+.game-phone__rental-card { display:grid; gap:8px; margin:10px 0; padding:12px; border:1px solid rgb(23 33 58 / 16%); border-radius:14px; background:#fffaf0; box-shadow:0 2px 8px rgb(23 33 58 / 10%); }
+.game-phone__rental-card input,.game-phone__rental-card button { min-height:38px; border:1px solid rgb(23 33 58 / 16%); border-radius:9px; padding:7px; font:inherit; }
 .game-phone__rental-card button { background:#ffd43b; font-weight:800; }
 .game-phone__rental-actions { display:grid; gap:6px; }
+.game-phone__market-explanation { margin: 0; font-size: 12px; line-height: 1.5; }
+.game-phone__stock-card { min-width: 0; overflow-wrap: anywhere; }
+.game-phone__stock-actions button { white-space: normal; min-width: 0; }
 </style>
 
 

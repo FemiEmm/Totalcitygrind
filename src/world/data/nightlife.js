@@ -42,7 +42,7 @@ const pump = (id, column, row) => ({
 
 export const nightlife = {
   id: "nightlife",
-  name: "Nightlife Area",
+  name: "Mushin LGA",
   worldX: DISTRICT_WIDTH,
   worldY: DISTRICT_HEIGHT,
   width: DISTRICT_WIDTH,
@@ -105,13 +105,13 @@ export const nightlife = {
     },
     {
       id: "event-centre",
-      label: "EVENT CENTRE",
+      label: "YABA EVENT CENTRE",
       ...gridRect(12, 11, 2, 2),
       services: ["moto-eazi-pickup", "moto-eazi-dropoff"],
     },
     {
       id: "nightlife-restaurant",
-      label: "RESTAURANT ROW",
+      label: "PALMGROVE RESTAURANTS",
       // The artwork is a native 2:1 roof strip; reserve its real 2x1 footprint.
       ...gridRect(19, 4, 2, 1),
       services: [
@@ -152,7 +152,7 @@ export const nightlife = {
     {
       id: "nightlife-restaurant-food-parking",
       label: "RESTAURANT PARKING",
-      sellerLabel: "Nightlife Restaurant Row",
+      sellerLabel: "Palmgrove Restaurants",
       sellerType: "restaurant",
       // Dedicated curb bay immediately east of the restaurant strip.
       ...gridRect(21, 4, 1, 1),
@@ -160,14 +160,14 @@ export const nightlife = {
   ],
 
   busStops: [
-    stop("night-stop-old-airport", "Old Airport", 13, 2, ["N1"]),
-    stop("night-stop-work-link", "Work Link", 6, 4, ["N1"]),
-    stop("night-stop-clubs", "Club Strip", 2, 7, ["N1", "N3"]),
-    stop("night-stop-circle", "Entertainment Circle", 11, 7, ["N1", "N3"]),
-    stop("night-stop-restaurants", "Restaurant Row", 22, 7, ["N1"]),
-    stop("night-stop-harbour", "Harbour", 10, 12, ["N3"]),
-    stop("night-stop-events", "Events", 19, 12, ["N3"]),
-    stop("night-stop-south-terminal", "South Terminal", 21, 15, ["N1", "N3"]),
+    stop("night-stop-old-airport", "Mushin", 13, 2, ["N1"]),
+    stop("night-stop-work-link", "Ladipo", 6, 4, ["N1"]),
+    stop("night-stop-clubs", "Isolo", 2, 7, ["N1", "N3"]),
+    stop("night-stop-circle", "Ilupeju", 11, 7, ["N1", "N3"]),
+    stop("night-stop-restaurants", "Palmgrove", 22, 7, ["N1"]),
+    stop("night-stop-harbour", "Ojuelegba", 10, 12, ["N3"]),
+    stop("night-stop-events", "Yaba", 19, 12, ["N3"]),
+    stop("night-stop-south-terminal", "Oyingbo", 21, 15, ["N1", "N3"]),
   ],
 };
 

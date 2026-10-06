@@ -1,4 +1,12 @@
 <script setup>
+import { advanceIntoxication, intoxicationSteering } from '../../player/systems/intoxication.js';
+import { migrateLocationLabels } from "../../game/migrateLocationLabels.js";
+import { createCrimeState, restoreCrimeState, addCrime } from "../../police/policeSystem.js";
+import { calculateNetWorth } from "../../wealth/netWorth.js";
+import wealthCatalogue from "../../wealth/catalogue.json";
+import { STARTER_HOMES } from '../../property/data/starterHomes.js';
+import { createCustomizationState, restoreCustomizationState, applyCustomization } from '../../customization/state.js';
+import { drawCustomizedVehicle } from '../../customization/rendering.js';
 import {
   computed,
   onBeforeUnmount,
@@ -23,20 +31,7 @@ import beachPropSocialUrl from "../../assets/ground/coast/beach-prop-social.png"
 import beachPropSurfUrl from "../../assets/ground/coast/beach-prop-surf.png";
 import beachPropKioskUrl from "../../assets/ground/coast/beach-prop-kiosk.png";
 import shorelineTransitionTileUrl from "../../assets/ground/coast/shoreline-transition-tile.png";
-import {
-  getCameraDimensions,
-
-  GROUND_COLOUR,
-  GRID_COLUMNS,
-  GRID_ROWS,
-  GRID_SIZE,
-  WORLD_HEIGHT,
-  WORLD_MAX_X,
-  WORLD_MAX_Y,
-  WORLD_MIN_X,
-  WORLD_MIN_Y,
-  WORLD_WIDTH,
-} from "../data/mapConstants";
+import { getCameraDimensions, GRID_COLUMNS, GRID_ROWS, GRID_SIZE, WORLD_HEIGHT, WORLD_MAX_X, WORLD_MAX_Y, WORLD_MIN_X, WORLD_MIN_Y, WORLD_WIDTH } from "../data/mapConstants";
 
 import {
   buildings,
@@ -67,10 +62,7 @@ import {
   waterTiles,
   WORLD2_TRAFFIC_SPAWN_POINTS,
 } from "../data/worldMap";
-import {
-  COASTAL_MAP_DATA,
-  COASTAL_POPULATION_ROUTES,
-} from "../data/coastalWorldMap.js";
+
 
 import { PLAYER_DANFO } from "../../player/data/playerDanfo";
 import {
@@ -130,6 +122,11 @@ import {
   withdrawSavingsForExpense,
 } from "../../economy/systems/bankSavings.js";
 import {
+  recordStockTransaction,
+  recordMarketActivity,
+  sampleMarketDeposits,
+  subscribeStockAdviser,
+  cancelStockAdviser,
   buyStock,
   createStockMarketState,
   getStockMarketView,
@@ -137,6 +134,7 @@ import {
   sellStock,
   updateStockMarketForDay,
 } from "../../economy/systems/stockMarket.js";
+import { observeTransactions, createMarketReceiptId } from "../../economy/systems/transactionObservers.js";
 import CarDealershipModal from "../../economy/components/CarDealershipModal.vue";
 import EstateAgencyModal from "../../property/components/EstateAgencyModal.vue";
 import { PROPERTY_CATALOGUE } from "../../property/data/properties.js";
@@ -187,7 +185,7 @@ import {
   addPassengerFare,
   addMotoEaziFare,
   addEmergencyBankLoan,
-  awardRouteCompletionBonus,
+  chargeAgberoPickup,
   borrowBankLoan,
   borrowQuickLoan,
   chargeExpense,
@@ -244,6 +242,7 @@ import {
   getBrtRouteSalary,
   PLAYER_BRT,
 } from "../../employment/data/brtEmployment.js";
+import AgberoPaymentToast from "../../danfo/components/AgberoPaymentToast.vue";
 import PassengerFeedback from "../../danfo/components/PassengerFeedback.vue";
 import RouteComplete from "../../danfo/components/RouteComplete.vue";
 import { DANFO_PASSENGER_CONFIG } from "../../danfo/data/danfoPassengerConfig.js";
@@ -516,6 +515,7 @@ const viewport = reactive({
 
 const pressedKeys = new Set();
 const danfoBodyMotion = createDanfoBodyMotion();
+const touchMotionQuery = window.matchMedia("(pointer: coarse)");
 const EMPTY_PLAYER_INPUT = new Set();
 const player = reactive(
   createPlayerVehicle(playerStart, PLAYER_DANFO),
@@ -577,6 +577,14 @@ const economyState = reactive(
   ),
 );
 const bankSavingsState = reactive(createBankSavingsState(gameClock.day));
+const customizationState = reactive(createCustomizationState());
+function handleCustomizeVehicle({ kind, id }) {
+  const result = applyCustomization(customizationState, activeVehicleConfig.value.id, kind, id, economyState.money);
+  if (!result.ok) return;
+  if (result.price > 0) chargeExpense({ economyState, amount: result.price, type: 'vehicle-customization', label: result.label, config: DANFO_ECONOMY_CONFIG });
+}
+const agberoPayment = ref(null);
+let agberoPaymentSequence = 0;
 const stockMarketState = reactive(createStockMarketState());
 const stockMarketView = computed(() => getStockMarketView(stockMarketState));
 const bankMessageFeed = computed(() => {
@@ -586,16 +594,26 @@ const bankMessageFeed = computed(() => {
 });
 
 function processStockMarketUpdate() {
-  const result = updateStockMarketForDay(stockMarketState, gameClock.day);
-  if (!result?.totalPayout) return result;
-  creditIncome({
-    economyState,
-    amount: result.totalPayout,
-    type: "stock-gain-payout",
-    label: "STOCK GAINS PAID",
-    config: DANFO_ECONOMY_CONFIG,
+  sampleMarketDeposits(stockMarketState, gameClock.day, gameClock.minuteOfDay, bankSavingsState.balance);
+  return updateStockMarketForDay(stockMarketState, gameClock.day, (amount) => {
+    if (economyState.money < amount) return false;
+    chargeExpense({ economyState, amount, type: "stock-adviser", label: "STOCK ADVISER AUTO RENEWAL - 7 DAYS", config: DANFO_ECONOMY_CONFIG });
+    return true;
   });
-  return result;
+}
+function handleSubscribeStockAdviser() {
+  const cost = subscribeStockAdviser(stockMarketState, gameClock.day, economyState.money);
+  if (cost !== null) {
+    if (cost > 0) chargeExpense({ economyState, amount: cost, type: "stock-adviser", label: "STOCK ADVISER - 7 DAYS", config: DANFO_ECONOMY_CONFIG });
+    saveGame();
+  }
+}
+function handleCancelStockAdviser() {
+  cancelStockAdviser(stockMarketState, gameClock.day);
+  saveGame();
+}
+function handleReadStockAdviser() {
+  stockMarketState.adviser.readThrough = stockMarketState.adviser.nextId - 1;
 }
 
 const fineState = reactive(
@@ -1060,6 +1078,7 @@ function beginMutiuStreetRace() {
   cancelRace(raceState);
   clearWorldTrafficForStreetRace();
   startIllegalStreetRace(illegalStreetRaceState);
+  addCrime(crimeState, "racing");
 
   player.x = MUTIU_STREET_RACE.start.x;
   player.y = MUTIU_STREET_RACE.start.y;
@@ -1096,7 +1115,13 @@ function restorePlayerAfterMutiuRace() {
       currentDay: gameClock.day,
       minuteOfDay: gameClock.minuteOfDay,
       ownedVehicleIds: [...economyState.ownedVehicleIds],
+      economyState: JSON.parse(JSON.stringify(economyState)),
+      bankSavingsState: JSON.parse(JSON.stringify(bankSavingsState)),
       stockMarketState: JSON.parse(JSON.stringify(stockMarketState)),
+      travelCrimeState: { ...crimeState },
+      travelPropertyState: JSON.parse(JSON.stringify(propertyState)),
+      travelLifeState: JSON.parse(JSON.stringify(lifeObligationState)),
+    customizationState: JSON.parse(JSON.stringify(customizationState)),
       towHome: true,
     });
     return;
@@ -1204,7 +1229,7 @@ function handleMutiuCall() {
     showPlayerWarning(
       "info",
       "NO RACE TONIGHT",
-      "Mutiu has no race running tonight. Try another night.",
+      "Mr-Wire has no race running tonight. Try another night.",
     );
   }
 }
@@ -1350,6 +1375,10 @@ watch(
     }
   },
 );
+
+const playerNetWorth = computed(() => calculateNetWorth({ economyState, bankSavingsState, stockMarketState, propertyState, businessState }, wealthCatalogue));
+
+const crimeState = reactive(createCrimeState());
 
 const employmentState = reactive({
   selectedJob: null,
@@ -1718,38 +1747,9 @@ const occupiedSeatCount = computed(() => {
   return passengerState.onboard.length;
 });
 
-function getDistanceToRectangle(point, rectangle) {
-  const nearestX = clamp(
-    point.x,
-    rectangle.x,
-    rectangle.x + rectangle.width,
-  );
 
-  const nearestY = clamp(
-    point.y,
-    rectangle.y,
-    rectangle.y + rectangle.height,
-  );
 
-  return Math.hypot(
-    point.x - nearestX,
-    point.y - nearestY,
-  );
-}
 
-function findNearbyService(serviceId) {
-  return (
-    landmarks
-      .filter((landmark) => landmark.services?.includes(serviceId))
-      .map((landmark) => ({
-        landmark,
-        distance: getDistanceToRectangle(player, landmark),
-      }))
-      .filter((entry) => entry.distance <= DANFO_ECONOMY_CONFIG.serviceDistance)
-      .sort((first, second) => first.distance - second.distance)[0]
-      ?.landmark ?? null
-  );
-}
 
 const nearbyFuelPump = computed(() => {
   return fuelPumps.find((fuelPump) => {
@@ -1780,6 +1780,7 @@ const nearbyBankParking = computed(() => {
   }) ?? null;
 });
 
+const activeHomeParkingId = computed(() => propertyState.activeHomeId === 'starter-rental' ? (propertyState.starterHomeId ?? 'starter-rental') : propertyState.activeHomeId);
 const nearbyAnyHomeParking = computed(() => {
   return homeParkingZones.find((parkingZone) => {
     return isPlayerInsideZone(parkingZone);
@@ -1789,14 +1790,14 @@ const nearbyAnyHomeParking = computed(() => {
 const nearbyHomeParking = computed(() => {
   const parkingZone = nearbyAnyHomeParking.value;
   if (!parkingZone) return null;
-  return (parkingZone.homeId ?? "starter-rental") === propertyState.activeHomeId
+  return (parkingZone.homeId ?? "starter-rental") === activeHomeParkingId.value
     ? parkingZone
     : null;
 });
 
 const activeHomeParkingZone = computed(() => {
   return homeParkingZones.find((parkingZone) => {
-    return (parkingZone.homeId ?? "starter-rental") === propertyState.activeHomeId;
+    return (parkingZone.homeId ?? "starter-rental") === activeHomeParkingId.value;
   }) ?? null;
 });
 
@@ -1804,13 +1805,14 @@ const canMoveToOwnedHome = computed(() => {
   const parkingZone = nearbyAnyHomeParking.value;
   return Boolean(
     parkingZone &&
-    (parkingZone.homeId ?? "starter-rental") === "starter-rental" &&
+    (parkingZone.homeId ?? "starter-rental") === (propertyState.starterHomeId ?? "starter-rental") &&
     propertyState.activeHomeId !== "starter-rental" &&
     activeHomeParkingZone.value,
   );
 });
 
 const activeHomeName = computed(() => {
+  if (propertyState.activeHomeId === 'starter-rental' && propertyState.starterHomeId) return STARTER_HOMES.find(home => home.id === propertyState.starterHomeId)?.name ?? 'Your room';
   return PROPERTY_CATALOGUE.find((property) => {
     return property.id === propertyState.activeHomeId;
   })?.name ?? "new home";
@@ -2365,6 +2367,7 @@ function processPlayerTrafficLightViolations(
     gameDay: gameClock.day,
     gameTime: displayedGameTime.value,
   });
+  addCrime(crimeState, "traffic");
   recordDriverLicenceTrafficViolation(driverLicenceState);
   if (routeState.status === "active") {
     routeCareerState.trafficViolationDuringRoute = true;
@@ -3994,18 +3997,23 @@ function drawPopulationVehicle(context, vehicle) {
       key: vehicle.typeId,
     });
   }
-  const renderWidth = vehicle.renderWidth ?? vehicle.width;
-  const renderLength = vehicle.renderLength ?? vehicle.length;
-  drawVehicleGroundShadow(context, renderWidth, renderLength);
+  // Resolve Danfo visuals from the same definition as the player, including old saves.
+  const isDanfo = vehicle.typeId === 'danfo';
+  const renderWidth = isDanfo ? PLAYER_DANFO.width * PLAYER_DANFO.spriteRenderScale : vehicle.renderWidth ?? vehicle.width;
+  const renderLength = isDanfo ? PLAYER_DANFO.length * PLAYER_DANFO.spriteRenderScale : vehicle.renderLength ?? vehicle.length;
+  const spriteCrop = isDanfo ? PLAYER_DANFO.spriteCrop : vehicle.spriteCrop;
+  // The cyan sedan sprite has transparent padding around its body.
+  const sedanShadow = vehicle.typeId === "private-citizen-1";
+  drawVehicleGroundShadow(context, sedanShadow ? vehicle.width : renderWidth, sedanShadow ? vehicle.length : renderLength);
 
   if (sprite) {
-    if (vehicle.spriteCrop) {
+    if (spriteCrop) {
       context.drawImage(
         sprite,
-        vehicle.spriteCrop.x,
-        vehicle.spriteCrop.y,
-        vehicle.spriteCrop.width,
-        vehicle.spriteCrop.height,
+        spriteCrop.x,
+        spriteCrop.y,
+        spriteCrop.width,
+        spriteCrop.height,
         -renderWidth / 2,
         -renderLength / 2,
         renderWidth,
@@ -4286,6 +4294,7 @@ function drawVehicleHeadlights(context, vehicle) {
   context.save();
   context.translate(renderTransform.x, renderTransform.y);
   context.rotate(renderTransform.rotation);
+  context.translate(0, vehicle.bodyOffsetY ?? 0);
   context.globalCompositeOperation = "screen";
 
   [-lampOffset, lampOffset].forEach((lampX) => {
@@ -4343,6 +4352,7 @@ function drawAllVehicleHeadlights(context) {
 
   if (isPlayerVehicleEngineStarted()) {
     drawVehicleHeadlights(context, {
+      bodyOffsetY: activeVehicleConfig.value.id === PLAYER_DANFO.id ? danfoBodyMotion.offsetY : 0,
       x: player.x,
       y: player.y,
       rotation: player.rotation,
@@ -4359,7 +4369,7 @@ function drawPlayerVehicleSignalLights(context) {
   const vehicleConfig = activeVehicleConfig.value;
   const renderTransform =
     getInterpolatedVehicleTransform(player);
-  const rearY = vehicleConfig.length / 2 - 5;
+  const rearY = vehicleConfig.length / 2 - 5 + (vehicleConfig.id === PLAYER_DANFO.id ? 8 : 0);
   const lampOffset = vehicleConfig.width * 0.3;
   const braking =
     pressedKeys.has("s") ||
@@ -4624,27 +4634,7 @@ function drawPlayerDanfo(context) {
     const spriteWidth = vehicleConfig.width * spriteScale;
     const spriteLength = vehicleConfig.length * spriteScale;
 
-    if (vehicleConfig.spriteCrop) {
-      context.drawImage(
-        activeSprite,
-        vehicleConfig.spriteCrop.x,
-        vehicleConfig.spriteCrop.y,
-        vehicleConfig.spriteCrop.width,
-        vehicleConfig.spriteCrop.height,
-        -spriteWidth / 2,
-        -spriteLength / 2,
-        spriteWidth,
-        spriteLength,
-      );
-    } else {
-      context.drawImage(
-        activeSprite,
-        -spriteWidth / 2,
-        -spriteLength / 2,
-        spriteWidth,
-        spriteLength,
-      );
-    }
+    drawCustomizedVehicle(context, activeSprite, vehicleConfig, customizationState.vehicles[vehicleConfig.id] ?? {}, spriteWidth, spriteLength);
 
     if (player.isColliding && showGrid.value) {
       context.strokeStyle = "#ff3b30";
@@ -4864,6 +4854,11 @@ function resizeCanvas() {
   canvas.height = Math.round(
     bounds.height * pixelRatio,
   );
+  // A paused world needs one redraw after resize, not a permanent frame loop.
+  if (props.paused) {
+    renderMap();
+    pausedFrameRendered = true;
+  }
 }
 
 function updateServiceModalAvailability() {
@@ -4976,55 +4971,7 @@ function applyWorldMapData(mapData) {
   staticMapTiles.clear();
 }
 
-function travelToWorldMap(
-  targetMapId,
-  {
-    bypassUnlock = false,
-    spawn = null,
-  } = {},
-) {
-  if (
-    targetMapId === "coastal-city" &&
-    !bypassUnlock &&
-    !propertyState.secondMapUnlocked
-  ) {
-    return;
-  }
 
-  pressedKeys.clear();
-  player.speed = 0;
-  stopPlayerVehicleEngine();
-  activeServiceModal.value = null;
-  currentServiceZoneId = null;
-  clearDanfoPassengerRoute(passengerState);
-  clearLastRouteBonus(economyState);
-  returnToRouteSelection(routeState);
-  cancelRace(raceState);
-
-  const mapData =
-    targetMapId === "coastal-city"
-      ? COASTAL_MAP_DATA
-      : MAINLAND_MAP_DATA;
-  currentMapId.value = mapData.id;
-  applyWorldMapData(mapData);
-  Object.assign(
-    populationState,
-    createPopulationTrafficState(),
-  );
-  const destination = spawn ?? mapData.playerStart;
-  player.x = destination.x;
-  player.y = destination.y;
-  player.rotation = destination.rotation;
-  player.previousX = player.x;
-  player.previousY = player.y;
-  player.previousRotation = player.rotation;
-  centreCameraOnPlayer();
-  handleObjectiveEvent(
-    mapData.id === "coastal-city"
-      ? "coastal-city-entered"
-      : "mainland-returned",
-  );
-}
 
 function handleMapTravel() {
   pressedKeys.clear();
@@ -5041,49 +4988,17 @@ function handleMapTravel() {
     currentDay: gameClock.day,
     minuteOfDay: gameClock.minuteOfDay,
     ownedVehicleIds: [...economyState.ownedVehicleIds],
+    economyState: JSON.parse(JSON.stringify(economyState)),
+    bankSavingsState: JSON.parse(JSON.stringify(bankSavingsState)),
     stockMarketState: JSON.parse(JSON.stringify(stockMarketState)),
+    travelCrimeState: { ...crimeState },
+    travelPropertyState: JSON.parse(JSON.stringify(propertyState)),
+    travelLifeState: JSON.parse(JSON.stringify(lifeObligationState)),
+    customizationState: JSON.parse(JSON.stringify(customizationState)),
   });
 }
 
-function beginWorldTransition({
-  targetMapId,
-  spawn,
-  label,
-  onComplete = null,
-}) {
-  if (worldTransitionTimer !== null) {
-    window.clearInterval(worldTransitionTimer);
-  }
-  worldTransition.active = true;
-  worldTransition.totalSeconds = 10;
-  worldTransition.remainingSeconds = 10;
-  worldTransition.label = label;
-  worldTransitionCompletion = onComplete;
-  travelToWorldMap(targetMapId, {
-    bypassUnlock: true,
-    spawn,
-  });
-  pressedKeys.clear();
-  player.speed = 0;
 
-  const startedAt = performance.now();
-  worldTransitionTimer = window.setInterval(() => {
-    const elapsedSeconds =
-      (performance.now() - startedAt) / 1000;
-    worldTransition.remainingSeconds = Math.max(
-      0,
-      10 - elapsedSeconds,
-    );
-    if (elapsedSeconds < 10) return;
-
-    window.clearInterval(worldTransitionTimer);
-    worldTransitionTimer = null;
-    worldTransition.active = false;
-    const completion = worldTransitionCompletion;
-    worldTransitionCompletion = null;
-    completion?.();
-  }, 100);
-}
 
 function handleDebugGoToCoastalCity() {
   showGrid.value = true;
@@ -5329,6 +5244,7 @@ function updateGameSimulation(deltaSeconds) {
         const impactSpeedKmh = displayedSpeed.value;
         playerTrafficCollisionDetected = false;
         const movementResult = updatePlayerVehicle({
+          steeringBias: intoxicationSteering(player, playerStatus, deltaSeconds),
           vehicle: player,
           pressedKeys,
           deltaSeconds,
@@ -5374,6 +5290,7 @@ function updateGameSimulation(deltaSeconds) {
             gameDay: gameClock.day,
             gameTime: displayedGameTime.value,
           });
+          addCrime(crimeState, "collision");
           recordDriverLicenceCollision(driverLicenceState);
           trafficCollisionFineActive = true;
         } else if (!movementResult.collided) {
@@ -5631,6 +5548,11 @@ function updateGameSimulation(deltaSeconds) {
       }
 
       if (employmentState.selectedJob === "danfo") {
+        const payment = chargeAgberoPickup({
+          economyState, currentDay: gameClock.day,
+          boardedCount: passengerResult.boardedCount, config: DANFO_ECONOMY_CONFIG,
+        });
+        if (payment) agberoPayment.value = { ...payment, id: ++agberoPaymentSequence };
         addPassengerFare(
           economyState,
           passengerResult.fareEarned,
@@ -5693,15 +5615,7 @@ function updateGameSimulation(deltaSeconds) {
             brtSalary,
           );
         } else {
-          const routeBonus = awardRouteCompletionBonus({
-            economyState,
-            route: routeEvent.route,
-            config: DANFO_ECONOMY_CONFIG,
-          });
-          handleObjectiveEvent(
-            "income-earned",
-            routeBonus,
-          );
+          economyState.lastRouteBonus = 0;
         }
 
         recordHomeArrival();
@@ -5766,6 +5680,7 @@ function updateGameSimulation(deltaSeconds) {
 }
 
 function animationLoop(timestamp) {
+  animationFrameId = null;
   const frameWorkStartedAt = performance.now();
   const frameDeltaSeconds = Math.min(
     Math.max(0, (timestamp - previousTimestamp) / 1000),
@@ -5782,8 +5697,6 @@ function animationLoop(timestamp) {
       renderMap();
       pausedFrameRendered = true;
     }
-    animationFrameId =
-      window.requestAnimationFrame(animationLoop);
     return;
   }
 
@@ -5820,7 +5733,7 @@ function animationLoop(timestamp) {
   );
   const simulationFinishedAt = performance.now();
   updateDanfoBodyMotion(danfoBodyMotion, frameDeltaSeconds, {
-    enabled: activeVehicleConfig.value.id === PLAYER_DANFO.id,
+    enabled: !touchMotionQuery.matches && activeVehicleConfig.value.id === PLAYER_DANFO.id,
     speed: player.speed,
     engineOn: isPlayerVehicleEngineStarted(),
     braking: pressedKeys.has("s") || pressedKeys.has("arrowdown"),
@@ -5845,22 +5758,24 @@ function animationLoop(timestamp) {
   );
 
   if (performanceSampleChanged) {
-    performanceDisplay.fps = performanceMonitor.fps;
-    performanceDisplay.frameMs = performanceMonitor.frameMs;
-    performanceDisplay.simulationMs =
-      performanceMonitor.simulationMs;
-    performanceDisplay.renderMs = performanceMonitor.renderMs;
-    performanceDisplay.trafficScale =
-      performanceMonitor.trafficScale;
-    performanceDisplay.activeVehicles =
-      populationState.vehicles.length;
-    performanceDisplay.visibleVehicles =
-      populationState.vehicles.reduce((count, vehicle) => {
-        const bounds = getPopulationVehicleCollisionBox(vehicle);
-        return count + Number(isVisible(bounds));
-      }, 0);
-    performanceDisplay.tileCacheMisses =
-      performanceMonitor.tileCacheMisses;
+    if (performanceSettings.showPerformanceMonitor && showGrid.value) {
+      performanceDisplay.fps = performanceMonitor.fps;
+      performanceDisplay.frameMs = performanceMonitor.frameMs;
+      performanceDisplay.simulationMs =
+        performanceMonitor.simulationMs;
+      performanceDisplay.renderMs = performanceMonitor.renderMs;
+      performanceDisplay.trafficScale =
+        performanceMonitor.trafficScale;
+      performanceDisplay.activeVehicles =
+        populationState.vehicles.length;
+      performanceDisplay.visibleVehicles =
+        populationState.vehicles.reduce((count, vehicle) => {
+          const bounds = getPopulationVehicleCollisionBox(vehicle);
+          return count + Number(isVisible(bounds));
+        }, 0);
+      performanceDisplay.tileCacheMisses =
+        performanceMonitor.tileCacheMisses;
+    }
     performanceMonitor.tileCacheMisses = 0;
 
     if (
@@ -5884,6 +5799,9 @@ function animationLoop(timestamp) {
 watch(
   () => props.paused,
   (paused) => {
+    if (!paused && animationFrameId === null) {
+      animationFrameId = window.requestAnimationFrame(animationLoop);
+    }
     pressedKeys.clear();
     simulationAccumulator = 0;
     trafficSimulationAccumulator = 0;
@@ -6018,12 +5936,14 @@ function saveGame() {
     playerStatus: { ...playerStatus },
     playerInventory: JSON.parse(JSON.stringify(playerInventory)),
     equippedFoodId: equippedFoodId.value,
+    crimeState: { ...crimeState },
     gameClock: { ...gameClock },
     routeState: JSON.parse(JSON.stringify(routeState)),
     passengerState: JSON.parse(JSON.stringify(passengerState)),
     economyState: JSON.parse(JSON.stringify(economyState)),
     bankSavingsState: JSON.parse(JSON.stringify(bankSavingsState)),
     stockMarketState: JSON.parse(JSON.stringify(stockMarketState)),
+    customizationState: JSON.parse(JSON.stringify(customizationState)),
     fineState: JSON.parse(JSON.stringify(fineState)),
     driverLicenceState: JSON.parse(JSON.stringify(driverLicenceState)),
     objectiveState: JSON.parse(JSON.stringify(objectiveState)),
@@ -6054,6 +5974,7 @@ function saveGame() {
         world2State,
       }),
     );
+    window.dispatchEvent(new CustomEvent('tcg:game-saved'));
     return true;
   } catch (error) {
     console.error("Unable to save game", error);
@@ -6077,6 +5998,7 @@ function restoreSavedGame() {
       return false;
     }
 
+    migrateLocationLabels(saveData);
     Object.assign(player, saveData.player ?? {});
     player.previousX = player.x;
     player.previousY = player.y;
@@ -6102,9 +6024,10 @@ function restoreSavedGame() {
     Object.assign(playerInventory, saveData.playerInventory ?? {});
     equippedFoodId.value = saveData.equippedFoodId ?? null;
     Object.assign(gameClock, saveData.gameClock ?? {});
+    restoreCrimeState(crimeState, saveData.crimeState);
     Object.assign(routeState, saveData.routeState ?? {});
     Object.assign(passengerState, saveData.passengerState ?? {});
-    Object.assign(economyState, saveData.economyState ?? {});
+    Object.assign(economyState, { lastAgberoTicketDay: 0, quickLoanInterestRemaining: 0, bankLoanInterestRemaining: 0 }, saveData.economyState ?? {});
     normaliseLoanState(economyState, DANFO_ECONOMY_CONFIG);
     restoreBankSavingsState(
       bankSavingsState,
@@ -6112,6 +6035,7 @@ function restoreSavedGame() {
       gameClock.day,
     );
     restoreStockMarketState(stockMarketState, saveData.stockMarketState);
+    restoreCustomizationState(customizationState, saveData.customizationState);
     processStockMarketUpdate();
     Object.assign(fineState, saveData.fineState ?? {});
     restoreDriverLicenceState(
@@ -6511,6 +6435,7 @@ function handleInventoryConsumption(itemId) {
   if (playerStatus.energy > PLAYER_WARNING_CONFIG.energy) {
     handleObjectiveEvent("energy-restored");
   }
+  saveGame();
 }
 
 function handlePocketFoodUse() {
@@ -6686,12 +6611,14 @@ function handleSleep(hours) {
     activePlayerWarning.value = null;
   }
 
+  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock),{crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
   const previousDay = gameClock.day;
   updateGameClock(
     gameClock,
     safeHours * 60 / GAME_TIME_CONFIG.gameMinutesPerRealSecond,
     GAME_TIME_CONFIG,
   );
+  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock),{sleeping:true,crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
   restoreEnergyFromSleep(
     playerStatus,
     safeHours * getHomeSleepMultiplier(propertyState),
@@ -6708,6 +6635,8 @@ function handleSleep(hours) {
       currentDay: gameClock.day,
       config: DANFO_ECONOMY_CONFIG,
     });
+    processBankSavingsDay(bankSavingsState, gameClock.day);
+    processStockMarketUpdate();
 
     const danfoFeesDue =
       isDrivingDanfo.value ||
@@ -6980,7 +6909,7 @@ function handleBusinessOfficePurchase() {
     economyState,
     amount: result.cashAmount,
     type: "business-office-purchase",
-    label: "WORK HUB BUSINESS OFFICE",
+    label: "IKEJA LGA BUSINESS OFFICE",
     config: DANFO_ECONOMY_CONFIG,
   });
   handleObjectiveEvent("business-office-purchased");
@@ -7496,11 +7425,18 @@ onMounted(() => {
       0,
       100,
     );
+    if (props.vehicleSnapshot.economyState) Object.assign(economyState, props.vehicleSnapshot.economyState);
+    normaliseLoanState(economyState, DANFO_ECONOMY_CONFIG);
+    if (props.vehicleSnapshot.travelCrimeState) restoreCrimeState(crimeState, props.vehicleSnapshot.travelCrimeState);
+    if (props.vehicleSnapshot.travelPropertyState) restorePropertyState(propertyState, props.vehicleSnapshot.travelPropertyState);
+    if (props.vehicleSnapshot.travelLifeState) restoreLifeObligationState(lifeObligationState, props.vehicleSnapshot.travelLifeState, LIFE_OBLIGATION_CONFIG);
     economyState.money =
       props.vehicleSnapshot.money ?? economyState.money;
     if (Array.isArray(props.vehicleSnapshot.ownedVehicleIds)) {
       economyState.ownedVehicleIds = [...new Set(props.vehicleSnapshot.ownedVehicleIds)];
     }
+    if (props.vehicleSnapshot.customizationState) restoreCustomizationState(customizationState, props.vehicleSnapshot.customizationState);
+    if (props.vehicleSnapshot.bankSavingsState) restoreBankSavingsState(bankSavingsState, props.vehicleSnapshot.bankSavingsState, props.vehicleSnapshot.currentDay);
     if (props.vehicleSnapshot.stockMarketState) {
       restoreStockMarketState(stockMarketState, props.vehicleSnapshot.stockMarketState);
     }
@@ -7690,6 +7626,17 @@ onBeforeUnmount(() => {
     );
   }
 });
+// Observe successful transactions only; never replay the saved ledger.
+function recordMarketReceipt(event) {
+  sampleMarketDeposits(stockMarketState, gameClock.day, gameClock.minuteOfDay, bankSavingsState.balance);
+  recordStockTransaction(stockMarketState, event, {
+    day: gameClock.day,
+    foodSeller: nearbyFoodService.value?.sellerType,
+    fuelPump: nearbyFuelPump.value?.id,
+  });
+}
+observeTransactions(economyState, recordMarketReceipt);
+observeTransactions(bankSavingsState, recordMarketReceipt);
 </script>
 
 <template>
@@ -7792,6 +7739,7 @@ onBeforeUnmount(() => {
     </div>
 
     <PlayerStatusHud
+      :intoxication="playerStatus.intoxication || 0"
       :health="playerStatus.health"
       :energy="playerStatus.energy"
       :show-energy="hudPreferences.energyBar"
@@ -7890,6 +7838,8 @@ onBeforeUnmount(() => {
     />
 
 
+    <AgberoPaymentToast :payment="agberoPayment" />
+
     <PassengerFeedback
       v-if="hudPreferences.feedback && passengerState.lastStopResult"
       :result="passengerState.lastStopResult"
@@ -7899,6 +7849,7 @@ onBeforeUnmount(() => {
       v-if="
         hudPreferences.feedback &&
         economyState.lastTransaction &&
+        economyState.lastTransaction.type !== 'agbero-payment' &&
         routeState.status !== 'complete' &&
         !economyState.gameOver
       "
@@ -7916,7 +7867,7 @@ onBeforeUnmount(() => {
     <RouteComplete
       v-if="routeState.status === 'complete' && completedRoute"
       :route="completedRoute"
-      :bonus="economyState.lastRouteBonus"
+      :bonus="employmentState.selectedJob === 'brt' ? economyState.lastRouteBonus : 0"
       :reward-label="
         employmentState.selectedJob === 'brt'
           ? 'BRT SALARY'
@@ -8074,12 +8025,15 @@ onBeforeUnmount(() => {
       v-if="mutiuEncounter.mode === 'introduction'"
       :character="CHARACTER_DEFINITIONS.mutiu"
       eyebrow="NEW CONTACT"
-      title="Mutiu Illegal"
-      message="Hello, my name is Mutiu. If you need extra cash on the side, call me. Night work only—and come with a fast car."
+      title="Mr-Wire"
+      message="Hello, my name is Mr-Wire. If you need extra cash on the side, call me. Night work only—and come with a fast car."
       @close="closeMutiuEncounter"
     />
 
     <GamePhone
+      :customization-vehicle="activeVehicleConfig"
+      :customization-state="customizationState"
+      @customize-vehicle="handleCustomizeVehicle"
       v-if="phoneVisible"
       :game-time="displayedGameTime"
       :current-day="gameClock.day"
@@ -8088,6 +8042,9 @@ onBeforeUnmount(() => {
       :money="economyState.money"
       :savings-balance="bankSavingsState.balance"
       :stock-market="stockMarketView"
+      :stock-adviser="stockMarketState.adviser"
+      :player-name="propertyState.playerName"
+      :net-worth="playerNetWorth"
       :routes="offeredRoutes"
       :route-status="routeState.status"
       :active-route="activeRoute"
@@ -8178,6 +8135,9 @@ onBeforeUnmount(() => {
       @pay-fines="handleFinePayment"
       @repay-loan="handleLoanRepayment"
       @take-bank-loan="handlePhoneBankLoan"
+      @cancel-stock-adviser="handleCancelStockAdviser"
+      @subscribe-stock-adviser="handleSubscribeStockAdviser"
+      @read-stock-adviser="handleReadStockAdviser"
       @buy-stock="handleBuyStock"
       @sell-stock="handleSellStock"
       @list-property-rental="handleRentalListing"
@@ -8283,7 +8243,7 @@ onBeforeUnmount(() => {
     repeating-linear-gradient(135deg, rgb(255 255 255 / 3%) 0 2px, transparent 2px 8px),
     linear-gradient(180deg, rgb(54 48 36 / 97%), rgb(29 27 23 / 97%));
   color: #f5ead0;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 48%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   pointer-events: none;
   transform: translateX(-50%);
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
@@ -8418,7 +8378,7 @@ onBeforeUnmount(() => {
   border-radius: 9px;
   color: #dff5ff;
   background: rgb(4 25 52 / 88%);
-  box-shadow: 0 8px 22px rgb(0 0 0 / 30%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   font-size: 11px;
   pointer-events: none;
 }
@@ -8510,7 +8470,7 @@ onBeforeUnmount(() => {
   color: #f4f0df;
   background:
     linear-gradient(135deg, #171711f2, #302b1df2);
-  box-shadow: 0 8px 24px #000a;
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   text-align: center;
   transform: translateX(-50%);
 }

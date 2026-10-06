@@ -100,7 +100,7 @@ export const PHONE_CALL_VOICES = Object.freeze({
     id: "mutiu-day-rejection",
     kind: "ambient",
     characterId: "mutiu",
-    message: "Calling Mutiu Illegal...",
+    message: "Calling Mr-Wire...",
     fileName: "mutiu-if-called-in the-morning-rejection voice.mp3",
     autoAnswer: true,
   }),
@@ -108,7 +108,7 @@ export const PHONE_CALL_VOICES = Object.freeze({
     id: "mutiu-race-reminder",
     kind: "mutiu-race",
     characterId: "mutiu",
-    message: "Mutiu has another nighttime race available.",
+    message: "Mr-Wire has another nighttime race available.",
     fileName: "mutiu-race-reminder-call-voice.mp3",
   }),
   "sister-check-in-1": callDefinition({

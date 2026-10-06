@@ -1,0 +1,51 @@
+{
+  "generator": "Built-in image_gen",
+  "status": "Integrated: club shop, intoxication, night screen and shared celebration",
+  "clubFootprint": "2x2 tiles",
+  "existingParking": "CLUB bay at X36 Y30",
+  "screenBehavior": "At night show club name. After One Million Crown purchase show player name + \" is in the house.\" with perimeter neon chase for 30 seconds.",
+  "assets": [
+    {
+      "id": "night-club-flat-roof",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-fc207708-b7dd-4c34-ab33-b6de825c2f59.png",
+      "destination": "src/assets/buildings/night-club-flat-roof.png",
+      "price": null,
+      "prompt": "Use case: precise-object-edit. Redesign this nightclub building sprite for Total City Grind. Preserve square 2x2 tile footprint and STRICT 90-degree overhead orthographic camera, top surfaces only, no visible vertical facades, no perspective or isometric angle. Match the reference's illustrated game texture and clear outlines. Replace all pitched roof sections with ONE completely FLAT dark charcoal roof. The main feature is a very large clean rectangular blank black LED screen flush into the roof, taking up about 70 percent of the square, with subtle fine pixel texture and NO TEXT. Roof border has slim segmented neon-light fixtures, currently OFF, suitable for a runtime chasing-light animation. Keep small ventilation details confined to narrow outer corners, uncluttered screen. Neat premium nightclub design, dark graphite with subtle burgundy accents. No people, cars, parking, roads, logos, words, lit neon glow, or baked-in signs. Entire building visible with minimal transparent margin and genuinely transparent background. This is the unlit daytime base asset; all screen text and illumination will be drawn later in code."
+    },
+    {
+      "id": "eko-reserve",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-5ed9c030-21b3-4498-8f18-31be5d9c1eee.png",
+      "destination": "src/assets/drinks/eko-reserve.png",
+      "price": 50000,
+      "prompt": "Use case: stylized-concept. Create a single luxury nightclub drink inventory sprite for Total City Grind, a colorful illustrated Nigerian city driving game. Transparent background, isolated centered bottle shown upright from the front, entire bottle visible with comfortable clear margin. Crisp hand-painted game illustration with clean dark outlines, readable bold silhouette and restrained highlights, NOT a realistic product photograph. No ground plane, no cast shadow, no glass beside it, no people, no official branding, no watermark. Fictional original design, blank decorative label without lettering; price and name will be supplied in the UI. Eko Reserve priced 50,000 naira: elegant dark green wine bottle, burgundy foil neck, simple cream label with an original small gold geometric motif."
+    },
+    {
+      "id": "mainland-gold",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-31c55a34-24ea-4c5e-963e-8197cb91b629.png",
+      "destination": "src/assets/drinks/mainland-gold.png",
+      "price": 150000,
+      "prompt": "Use case: stylized-concept. Create a single luxury nightclub drink inventory sprite for Total City Grind, a colorful illustrated Nigerian city driving game. Transparent background, isolated centered bottle shown upright from the front, entire bottle visible with comfortable clear margin. Crisp hand-painted game illustration with clean dark outlines, readable bold silhouette and restrained highlights, NOT a realistic product photograph. No ground plane, no cast shadow, no glass beside it, no people, no official branding, no watermark. Fictional original design, blank decorative label without lettering; price and name will be supplied in the UI. Mainland Gold priced 150,000 naira: broad amber cognac bottle with rounded shoulders, short neck, gold cap, dark navy label and narrow gold trim."
+    },
+    {
+      "id": "owanbe-rose",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-4b511a37-0b65-4c4a-b4f2-201d9eb85334.png",
+      "destination": "src/assets/drinks/owanbe-rose.png",
+      "price": 300000,
+      "prompt": "Use case: stylized-concept. Create a single luxury nightclub drink inventory sprite for Total City Grind, a colorful illustrated Nigerian city driving game. Transparent background, isolated centered bottle shown upright from the front, entire bottle visible with comfortable clear margin. Crisp hand-painted game illustration with clean dark outlines, readable bold silhouette and restrained highlights, NOT a realistic product photograph. No ground plane, no cast shadow, no glass beside it, no people, no official branding, no watermark. Fictional original design, blank decorative label without lettering; price and name will be supplied in the UI. Owanbe Rosé priced 300,000 naira: premium clear blush-pink sparkling wine bottle, rose-gold foil neck, elegant ivory oval label, bright pink liquid."
+    },
+    {
+      "id": "big-baller-noir",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-7d6ae73a-4951-4717-8a34-f211d0680e35.png",
+      "destination": "src/assets/drinks/big-baller-noir.png",
+      "price": 600000,
+      "prompt": "Use case: stylized-concept. Create a single luxury nightclub drink inventory sprite for Total City Grind, a colorful illustrated Nigerian city driving game. Transparent background, isolated centered bottle shown upright from the front, entire bottle visible with comfortable clear margin. Crisp hand-painted game illustration with clean dark outlines, readable bold silhouette and restrained highlights, NOT a realistic product photograph. No ground plane, no cast shadow, no glass beside it, no people, no official branding, no watermark. Fictional original design, blank decorative label without lettering; price and name will be supplied in the UI. Big Baller Noir priced 600,000 naira: luxurious matte black champagne bottle with strong rounded silhouette, silver foil neck, clean angular silver label motif and a few purple accents."
+    },
+    {
+      "id": "one-million-crown",
+      "path": "C:\\Users\\Owner\\.codex\\generated_images\\01a0f352-b1e6-7162-95e9-e4917495f3c1\\exec-341938b8-c231-440b-b2d8-8b341e4cc763.png",
+      "destination": "src/assets/drinks/one-million-crown.png",
+      "price": 1000000,
+      "prompt": "Use case: stylized-concept. Create a single luxury nightclub drink inventory sprite for Total City Grind, a colorful illustrated Nigerian city driving game. Transparent background, isolated centered bottle shown upright from the front, entire bottle visible with comfortable clear margin. Crisp hand-painted game illustration with clean dark outlines, readable bold silhouette and restrained highlights, NOT a realistic product photograph. No ground plane, no cast shadow, no glass beside it, no people, no official branding, no watermark. Fictional original design, blank decorative label without lettering; price and name will be supplied in the UI. One Million Crown priced 1,000,000 naira: the most luxurious bottle in the series, distinctive broad faceted gold decanter with amber liquid, jewel-like emerald green stopper and decorative emerald label plaque, original geometric detailing. Expensive and celebratory but still simple enough to read as a small game icon."
+    }
+  ]
+}

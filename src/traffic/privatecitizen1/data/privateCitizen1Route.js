@@ -170,12 +170,12 @@ export const PRIVATE_CITIZEN_1_ROUTE = Object.freeze({
 
     // The old route crossed the dirt relief road at X21-X23 Y15.
     // Take the long paved detour instead: remain on Community Avenue,
-    // reach Estate Spine, then turn south on its proper southbound lane.
+    // reach Abule Egba Road, then turn south on its proper southbound lane.
     twoLaneHorizontal(24, 7, EAST),
     twoLaneVertical(24, 9, SOUTH, mergeReservation(24, 9)),
     twoLaneVertical(24, 12, SOUTH),
 
-    // Turn east onto Market Commerce and continue into Work Hub.
+    // Turn east onto Market Commerce and continue into Ikeja LGA.
     twoLaneHorizontal(25, 12, EAST, mergeReservation(25, 13)),
     twoLaneHorizontal(47, 12, EAST),
     twoLaneHorizontal(49, 12, EAST),
@@ -199,7 +199,7 @@ export const PRIVATE_CITIZEN_1_ROUTE = Object.freeze({
     twoLaneHorizontal(47, 12, WEST),
     twoLaneHorizontal(45, 12, WEST),
 
-    // Turn south on Work Hub Spine and use paved Dealership Street.
+    // Turn south on Ikeja LGA Spine and use paved Dealership Street.
     twoLaneVertical(45, 13, SOUTH, mergeReservation(45, 13)),
     twoLaneVertical(45, 14, SOUTH),
     oneLane(45, 14, WEST, mergeReservation(45, 14)),
@@ -216,7 +216,7 @@ export const PRIVATE_CITIZEN_1_ROUTE = Object.freeze({
     twoLaneHorizontal(35, 12, WEST, mergeReservation(35, 12)),
     twoLaneHorizontal(25, 12, WEST),
 
-    // Travel south through the proper Estate Spine/Highway junction.
+    // Travel south through the proper Abule Egba Road/Highway junction.
     twoLaneVertical(24, 13, SOUTH, mergeReservation(24, 13)),
     twoLaneVertical(24, 23, SOUTH),
 
@@ -245,13 +245,13 @@ export const PRIVATE_CITIZEN_1_ROUTE = Object.freeze({
     twoLaneHorizontal(8, 31, EAST, mergeReservation(8, 32)),
     twoLaneHorizontal(46, 31, EAST),
 
-    // Turn north on Nightlife Spine's correct northbound lane.
+    // Turn north on Mushin LGA Spine's correct northbound lane.
     twoLaneVertical(46, 31, NORTH, mergeReservation(47, 31)),
     twoLaneVertical(46, 19, NORTH),
     twoLaneVertical(46, 18, NORTH),
 
     // Cross the highway only through the declared central opening,
-    // shifting onto Work Hub Spine's northbound lane inside the junction.
+    // shifting onto Ikeja LGA Spine's northbound lane inside the junction.
     twoLaneVertical(45, 17, NORTH, mergeReservation(46, 17)),
     twoLaneVertical(45, 14, NORTH),
 
@@ -273,7 +273,7 @@ export const PRIVATE_CITIZEN_1_ROUTE = Object.freeze({
     twoLaneHorizontal(35, 12, WEST, mergeReservation(35, 12)),
     twoLaneHorizontal(25, 12, WEST),
 
-    // Northbound Estate Spine, then westbound Community Avenue.
+    // Northbound Abule Egba Road, then westbound Community Avenue.
     twoLaneVertical(24, 12, NORTH, mergeReservation(25, 12)),
     twoLaneVertical(24, 8, NORTH),
     twoLaneHorizontal(25, 7, WEST, mergeReservation(25, 7)),

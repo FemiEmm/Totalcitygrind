@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { isPlayerVehicleEngineStarted } from "../../audio/vehicleAudio.js";
-const props = defineProps({ transmission: { type: String, default: "automatic" }, steeringOnly: { type: Boolean, default: false } });
+const props = defineProps({ transmission: { type: String, default: "automatic" }, ignitionOnly: { type: Boolean, default: false } });
 const engineOn = computed(isPlayerVehicleEngineStarted);
 const emit = defineEmits(["input"]);
 const held = ref(new Map());
@@ -11,7 +11,14 @@ const groups = [
   { id: "utility", controls: [{ key: "i", label: "Start or stop engine", text: "START", icon: "fa-key" }, { key: "h", label: "Horn", text: "HORN" }] },
   { id: "pedals", controls: [{ key: "s", label: "Brake or reverse", text: "BRAKE / R" }, { key: "w", label: "Throttle — accelerate", text: "THROTTLE" }] },
 ];
-const visibleGroups = computed(() => groups.filter(group => props.steeringOnly ? group.id === "steering" : group.id !== "gears" || props.transmission === "manual"));
+const visibleGroups = computed(() => props.ignitionOnly
+  ? [{ id: "utility", controls: groups.find(group => group.id === "utility").controls.filter(control => control.key === "i") }]
+  : groups.filter(group => group.id !== "gears" || props.transmission === "manual"));
+function activateFromKeyboard(event, key) {
+  if (event.detail !== 0 || key !== "i") return;
+  emit("input", { key, down: true });
+  emit("input", { key, down: false });
+}
 function press(event, key) {
   if (event.pointerType === "mouse" && event.button !== 0) return;
   event.currentTarget.setPointerCapture(event.pointerId);
@@ -38,12 +45,12 @@ onBeforeUnmount(() => {
 });
 </script>
 <template>
-  <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual', 'touch-controls--steering-only': props.steeringOnly }" aria-label="Driving controls">
+  <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual', 'touch-controls--ignition-only': props.ignitionOnly }" aria-label="Driving controls">
     <div v-for="group in visibleGroups" :key="group.id" class="touch-controls__group" :class="`touch-controls__${group.id}`">
       <button v-for="control in group.controls" :key="control.key" type="button" :aria-label="control.key === 'i' ? (engineOn ? 'Stop engine' : 'Start engine') : control.label"
         :class="{ held: [...held.values()].includes(control.key), accelerator: control.key === 'w' }"
         @pointerdown.prevent="press($event, control.key)" @pointerup="release" @pointercancel="release"
-        @lostpointercapture="release" @contextmenu.prevent>
+        @lostpointercapture="release" @contextmenu.prevent @click="activateFromKeyboard($event, control.key)">
         <i v-if="control.icon" class="fa-solid" :class="control.icon" aria-hidden="true" />
         <span v-if="control.text">{{ control.key === "i" ? (engineOn ? "STOP" : "START") : control.text }}</span>
       </button>
@@ -53,7 +60,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .touch-controls { position:absolute; z-index:1100; inset:auto max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); display:grid; grid-template-columns:auto auto 1fr auto; align-items:end; gap:10px; pointer-events:none; }
 .touch-controls--automatic { grid-template-columns:auto 1fr auto; }
-.touch-controls--steering-only { left:50%; right:auto; width:max-content; transform:translateX(-50%); grid-template-columns:auto; }
+.touch-controls--ignition-only { left:50%; right:auto; width:max-content; transform:translateX(-50%); grid-template-columns:auto; }
 .touch-controls__steering button { display:grid; place-items:center; }
 .touch-controls__steering i { font-size:32px; line-height:1; pointer-events:none; }
 .touch-controls__group { display:flex; gap:8px; }
@@ -77,4 +84,12 @@ button.held { background:#65d6ee; color:#17213a; transform:translateY(2px); }
   button { width:67.5px; height:72.5px; }
   .touch-controls__utility button, .touch-controls__gears button { width:60px; height:55px; }
 }
+/* Keep pedal labels inside their hit areas without splitting words. */
+button { padding:4px; line-height:1.15; }
+button > span { display:block; max-width:100%; white-space:normal; overflow-wrap:normal; word-break:normal; }
+button.accelerator { font-size:11px; letter-spacing:0; }
+@media (pointer:coarse) and (min-width:701px) { button.accelerator { font-size:13px; } }
+@media (max-width:700px) { button.accelerator { font-size:9px; } }
+@media (pointer:coarse) and (max-width:700px) { button.accelerator { font-size:11px; } }
+.touch-controls--ignition-only .touch-controls__utility button { width:88px; height:56px; font-size:12px; }
 </style>

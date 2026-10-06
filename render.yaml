@@ -1,0 +1,68 @@
+# Optional Blueprint. These same settings can be entered via New Web Service.
+# Frontend remains at the repository root and continues to deploy on Netlify.
+services:
+  - type: web
+    name: tcg-backender
+    runtime: node
+    rootDir: services/backender
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: STORAGE_DRIVER
+        value: postgres
+      - key: CLIENT_ORIGINS
+        value: https://totalcitygrind.netlify.app
+      - key: DATABASE_URL
+        sync: false
+      - key: ANON_KEY
+        generateValue: true
+      - key: SERVICE_ROLE_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+  - type: web
+    name: tcg-game-server
+    runtime: node
+    rootDir: services/game-server
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: REQUIRE_AUTH
+        value: 'true'
+      - key: BACKEND_PROVIDER
+        value: backender
+      - key: BACKEND_URL
+        fromService:
+          name: tcg-backender
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: BACKEND_ANON_KEY
+        fromService:
+          name: tcg-backender
+          type: web
+          envVarKey: ANON_KEY
+      - key: BACKEND_SERVICE_ROLE_KEY
+        fromService:
+          name: tcg-backender
+          type: web
+          envVarKey: SERVICE_ROLE_KEY
+      - key: CLIENT_ORIGINS
+        value: https://totalcitygrind.netlify.app
+      - key: ALLOW_NULL_ORIGIN
+        value: 'false'
+      - key: MAX_PLAYERS
+        value: '100'
+      - key: SNAPSHOT_HZ
+        value: '10'

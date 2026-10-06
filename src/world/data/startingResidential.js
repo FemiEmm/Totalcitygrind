@@ -1,3 +1,5 @@
+import { STARTER_HOME_ROWS } from '../../property/data/starterHomes.js';
+import singleRoomRowUrl from '../../assets/buildings/generic/single-room-row-1x4.png';
 ﻿import {
   DISTRICT_HEIGHT,
   DISTRICT_WIDTH,
@@ -42,7 +44,7 @@ const pump = (id, column, row) => ({
 
 export const startingResidential = {
   id: "starting-residential",
-  name: "Starting Residential Area",
+  name: "Ifako-Ijaiye LGA",
   worldX: 0,
   worldY: 0,
   width: DISTRICT_WIDTH,
@@ -100,7 +102,7 @@ export const startingResidential = {
 
   barriers: [
     // The centre median separates the two westbound lanes from the two
-    // eastbound lanes. Leave a two-tile opening at Estate Spine.
+    // eastbound lanes. Leave a two-tile opening at Abule Egba Road.
     {
       id: "lagoon-centre-median-west-a",
       // Keep the first two edge tiles open so vehicles entering the world
@@ -124,7 +126,7 @@ export const startingResidential = {
     },
     {
       id: "danfo-garage",
-      label: "DANFO GARAGE",
+      label: "AHMADIYYA GARAGE",
       ...gridRect(13, 3, 4, 1),
       services: ["danfo-start", "garage-fee"],
     },
@@ -142,7 +144,7 @@ export const startingResidential = {
     },
     {
       id: "community-clinic",
-      label: "GENERAL HOSPITAL",
+      label: "ABULE EGBA HOSPITAL",
       ...gridRect(27, 3, 2, 2),
       services: [
         "health-public",
@@ -190,6 +192,7 @@ export const startingResidential = {
       id: "mainland-terrace-parking",
       label: "MAINLAND TERRACE PARKING",
       homeId: "mainland-home",
+      shortLabel: "MT", parkingFront: "south",
       ...gridRect(16, 12, 1, 1),
     },
   ],
@@ -206,7 +209,7 @@ export const startingResidential = {
     {
       id: "general-hospital-parking",
       label: "HOSPITAL PARKING",
-      provider: "General Hospital",
+      provider: "Abule Egba Hospital",
       providerType: "public-hospital",
       ...gridRect(26, 4, 1, 1),
     },
@@ -228,14 +231,44 @@ export const startingResidential = {
   ],
 
   busStops: [
-    stop("res-stop-home", "Home Junction", 6, 6, ["R1"]),
-    stop("res-stop-garage", "Garage", 14, 4, ["R1", "R3"]),
-    stop("res-stop-clinic", "General Hospital", 20, 6, ["R1"]),
-    stop("res-stop-loop", "Community Loop", 5, 9, ["R3"]),
-    stop("res-stop-estate", "Estate Gate", 21, 9, ["R1", "R4"]),
-    stop("res-stop-east", "East Link", 30, 9, ["R4"]),
+    stop("res-stop-home", "Alakuko", 6, 6, ["R1"]),
+    stop("res-stop-garage", "Ahmadiyya", 14, 4, ["R1", "R3"]),
+    stop("res-stop-clinic", "Abule Egba", 20, 6, ["R1"]),
+    stop("res-stop-loop", "Meiran", 5, 9, ["R3"]),
+    stop("res-stop-estate", "Abule Oki", 21, 9, ["R1", "R4"]),
+    stop("res-stop-east", "Pleasure", 30, 9, ["R4"]),
   ],
 };
+
+// Audited four-room rows; parking occupies its own adjacent tile row/column.
+const singleRoomSites = STARTER_HOME_ROWS;
+for (const site of singleRoomSites) {
+  const vertical = site.front === 'east' || site.front === 'west';
+  const houseX = site.x + (site.front === 'west' ? 1 : 0);
+  const houseY = site.y + (site.front === 'north' ? 1 : 0);
+  const parkingX = site.x + (site.front === 'east' ? 1 : 0);
+  const parkingY = site.y + (site.front === 'south' ? 1 : 0);
+  const id = 'single-room-row-' + site.name.toLowerCase();
+  startingResidential.landmarks.push({
+    id, label: 'SINGLE ROOMS ' + site.name,
+    ...gridRect(houseX, houseY, vertical ? 1 : 4, vertical ? 4 : 1),
+    services: [], spriteUrl: singleRoomRowUrl,
+    singleRoomRow: true, spriteRotationQuarterTurns: vertical ? 1 : 0,
+    spriteSourceFraction: { x: .03, y: .14, width: .94, height: .71 },
+  });
+  for (let room = 0; room < 4; room++) {
+    const column = parkingX + (vertical ? 0 : room);
+    const row = parkingY + (vertical ? room : 0);
+    const bayId = id + '-room-' + (room + 1);
+    startingResidential.roads.push(road(bayId + '-paving', column, row, 1, 1, 'local'));
+    startingResidential.homeParkingZones.push({
+      id: bayId + '-parking', homeId: bayId,
+      label: 'ROOM ' + site.name + (room + 1) + ' PARKING',
+      shortLabel: site.name + (room + 1), parkingFront: site.front,
+      ...gridRect(column, row, 1, 1),
+    });
+  }
+}
 
 const startingTrafficLightReservations = [
   [16, 9],

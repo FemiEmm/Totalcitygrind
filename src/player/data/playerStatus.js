@@ -61,7 +61,7 @@ export const FOOD_ITEMS = Object.freeze([
     id: "dry-gin",
     label: "Dry gin",
     description:
-      "Restores 100 energy now, but energy crashes to 10 after three game hours.",
+      "Restores 100 energy now. After three game hours energy drops to 10 and intoxication rises by 50%.",
     price: 1800,
     energy: 100,
     imageUrl: dryGinImageUrl,

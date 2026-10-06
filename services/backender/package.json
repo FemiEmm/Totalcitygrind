@@ -1,0 +1,18 @@
+{
+  "name": "backender",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Total City Grind account and authoritative economy API with Supabase PostgreSQL storage",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "dev": "node --env-file=.env --watch src/index.js",
+    "start": "node --env-file-if-exists=.env src/index.js",
+    "export-profiles": "node --env-file=.env scripts/export-profiles.js"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
+}

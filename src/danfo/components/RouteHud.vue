@@ -2,6 +2,7 @@
 import { computed } from "vue";
 
 const props = defineProps({
+  activityLabel:{type:String,default:null},
   route: {
     type: Object,
     default: null,
@@ -45,7 +46,7 @@ const instruction = computed(() => {
     return "Slow down";
   }
 
-  return "Boarding passengers";
+  return props.activityLabel || "Boarding passengers";
 });
 </script>
 
@@ -54,19 +55,19 @@ const instruction = computed(() => {
     v-if="route"
     class="route-hud"
     :class="{ 'route-hud--loading': insideStop }"
-    aria-label="Danfo route progress"
+    :aria-label="activityLabel ? 'Waste collection progress' : 'Danfo route progress'"
   >
     <header class="route-hud__header">
       <span class="route-hud__route-id">{{ route.id }}</span>
       <div>
         <strong>{{ route.name }}</strong>
-        <small>STOP {{ progressText }}</small>
+        <small v-if="!activityLabel">STOP {{ progressText }}</small>
       </div>
     </header>
 
     <div v-if="insideStop" class="route-hud__action">
       <strong>{{ instruction }}</strong>
-      <div class="route-hud__hold" aria-label="Passenger loading progress">
+      <div class="route-hud__hold" :aria-label="activityLabel ? 'Waste collection progress' : 'Passenger loading progress'">
         <span :style="{ width: `${holdProgress * 100}%` }" />
       </div>
     </div>
@@ -177,4 +178,5 @@ const instruction = computed(() => {
   background: #7cad2c;
   transition: width 80ms linear;
 }
+.route-hud.route-hud--collection{top:auto;bottom:112px;width:min(340px,calc(100% - 24px));min-width:0;grid-template-columns:1fr;gap:6px;box-sizing:border-box}.route-hud--collection .route-hud__header strong{white-space:normal;overflow-wrap:anywhere}
 </style>

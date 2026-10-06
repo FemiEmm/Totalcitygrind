@@ -66,7 +66,7 @@ defineProps({
     rgb(11 52 121 / 97%)
   );
   box-shadow: var(--game-panel-shadow);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
   gap: 4px;
   font-family: "Basic", sans-serif;
   text-align: center;

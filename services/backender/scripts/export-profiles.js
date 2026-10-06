@@ -1,0 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const source=path.resolve(process.env.DATA_FILE||'./data/backender.json');
+if(!fs.existsSync(source)) throw new Error('No local accounts have been created yet');
+const data=JSON.parse(fs.readFileSync(source,'utf8'));
+fs.mkdirSync('exports',{recursive:true});
+const stamp=new Date().toISOString().split(':').join('-');
+const output=path.join('exports','profiles-'+stamp+'.json');
+fs.writeFileSync(output,JSON.stringify(Object.values(data.profiles),null,2),{mode:0o600});
+console.log('Profile data exported to '+output+'. Auth users, passwords and sessions are excluded.');

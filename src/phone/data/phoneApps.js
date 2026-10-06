@@ -1,4 +1,6 @@
 export const PHONE_APPS = Object.freeze([
+  Object.freeze({id:"housing",label:"Housing",iconClass:"fa-solid fa-house",colour:"#da9330"}),
+  Object.freeze({id:"me",label:"Me",iconClass:"fa-solid fa-user",colour:"#288c95"}),
   Object.freeze({
     id: "messages",
     label: "Messages",
@@ -87,6 +89,8 @@ export const PHONE_APPS = Object.freeze([
     colour: "#356f9b",
     hidden: true,
   }),
+  Object.freeze({ id: "bpc", label: "BPC", iconClass: "fa-solid fa-crown", colour: "#ad852f" }),
+  Object.freeze({ id: "customize", label: "CUSTOMIZE", iconClass: "fa-solid fa-palette", colour: "#1eae73" }),
   Object.freeze({
     id: "settings",
     label: "Settings",

@@ -82,7 +82,7 @@ function formatMoney(value) {
   border-radius: 18px;
   background: #f5f0e4;
   color: #17201e;
-  box-shadow: 0 24px 70px rgb(0 0 0 / 50%);
+  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
 }
 
 header span {

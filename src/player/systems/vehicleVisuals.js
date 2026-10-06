@@ -36,5 +36,6 @@ export function updateDanfoBodyMotion(state, deltaSeconds, { enabled, engineOn, 
   const engineShake = Math.abs(speed) < 0.05
     ? 0.65 * Math.sin(state.time * Math.PI * 16) + 0.18 * Math.sin(state.time * Math.PI * 23)
     : 0;
-  state.offsetY = engineShake + brakeRock;
+  // Keep both the idle shake and braking rebound subtle.
+  state.offsetY = (engineShake + brakeRock) * 0.5;
 }

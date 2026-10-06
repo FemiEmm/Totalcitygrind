@@ -43,17 +43,17 @@ onMounted(() => closeButton.value?.focus());
 </template>
 <style scoped>
 .daily-quests { position:absolute; z-index:23000; inset:0; display:grid; place-items:center; padding:68px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); background:rgb(7 12 27 / 78%); }
-.daily-quests__card { width:min(560px,100%); max-height:100%; min-height:0; overflow-y:auto; padding:18px; border:3px solid #17213a; border-radius:18px; color:#17213a; background:#fff7dc; box-shadow:4px 5px 0 #17213a; overscroll-behavior:contain; touch-action:pan-y; }
+.daily-quests__card { width:min(560px,100%); max-height:100%; min-height:0; overflow-y:auto; padding:18px; border:1px solid rgb(23 33 58 / 16%); border-radius:18px; color:#17213a; background:#fff7dc; box-shadow:0 2px 8px rgb(23 33 58 / 10%); overscroll-behavior:contain; touch-action:pan-y; }
 header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
 h3 { margin:18px 0 8px; font-size:17px; }
 h4 { margin:4px 0; font-size:15px; }
 .daily-quests__story small { color:#ad4d15; font-weight:bold; }
 h2 { margin:3px 0; font-size:25px; }
 header small { font-size:11px; font-weight:bold; }
-button { flex-shrink:0; width:44px; height:44px; border:2px solid #17213a; border-radius:12px; color:#17213a; background:#ffd43b; font-size:26px; cursor:pointer; }
+button { flex-shrink:0; width:44px; height:44px; border:1px solid rgb(23 33 58 / 16%); border-radius:12px; color:#17213a; background:#ffd43b; font-size:26px; cursor:pointer; }
 p { font-size:13px; line-height:1.4; }
 .daily-quests__list { display:grid; gap:10px; margin:12px 0; }
-article { display:flex; gap:10px; padding:12px; border:2px solid #17213a; border-radius:12px; background:#fffdf4; }
+article { display:flex; gap:10px; padding:12px; border:1px solid rgb(23 33 58 / 16%); border-radius:12px; background:#fffdf4; }
 article > i { color:#c66a18; margin-top:3px; }
 article > div { flex:1; min-width:0; }
 article p { margin:4px 0 8px; }

@@ -1,3 +1,4 @@
+import { advanceIntoxication } from './intoxication.js';
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
 }
@@ -7,6 +8,7 @@ export function createPlayerStatusState(config) {
     health: config.maximumHealth,
     energy: config.maximumEnergy,
     dryGinCrashAtGameMinute: null,
+    ginDoses: [], intoxication: 0, intoxicationRemainingMinutes: 0, effectsLastMinute: null,
   };
 }
 
@@ -30,16 +32,7 @@ export function updatePlayerEnergy({
     config.maximumEnergy,
   );
 
-  if (
-    status.dryGinCrashAtGameMinute !== null &&
-    absoluteGameMinute >= status.dryGinCrashAtGameMinute
-  ) {
-    status.energy = Math.min(
-      status.energy,
-      config.dryGinCrashEnergy,
-    );
-    status.dryGinCrashAtGameMinute = null;
-  }
+  advanceIntoxication(status,absoluteGameMinute,{crashEnergy:config.dryGinCrashEnergy});
 }
 
 export function applyCollisionHealthLoss({
@@ -79,6 +72,7 @@ export function consumeFood({
   absoluteGameMinute,
   config,
 }) {
+  advanceIntoxication(status,absoluteGameMinute,{crashEnergy:config.dryGinCrashEnergy});
   status.energy = clamp(
     status.energy + item.energy,
     0,
@@ -86,8 +80,8 @@ export function consumeFood({
   );
 
   if (item.delayedCrash) {
-    status.dryGinCrashAtGameMinute =
-      absoluteGameMinute + config.dryGinCrashAfterMinutes;
+    status.ginDoses.push(absoluteGameMinute+config.dryGinCrashAfterMinutes);
+    status.dryGinCrashAtGameMinute=Math.min(...status.ginDoses);
   }
 }
 
@@ -108,6 +102,6 @@ export function restoreEnergyFromSleep(
     0,
     config.maximumEnergy,
   );
-  status.dryGinCrashAtGameMinute = null;
+  // Sleeping does not cancel pending gin doses. The sleep time advance handles them.
 }
 

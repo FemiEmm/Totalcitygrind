@@ -30,7 +30,6 @@ button { touch-action:manipulation; }
   .player-status__row > i { width:24px !important; height:22px !important; font-size:18px !important; }
   .driving-hud-row { left:174px; right:114px; width:auto; transform:none; justify-content:center; }
   .route-navigation__tape { display:none; }
-  .moto-eazi-hud { top:64px !important; right:max(10px, env(safe-area-inset-right)) !important; max-width:210px; }
   .driving-hud-row .vehicle-hud { text-align:center; }
   .vehicle-hud__instruments, .vehicle-hud__gear, .vehicle-hud__pocket { display:none !important; }
   .vehicle-hud__mobile { display:grid !important; gap:3px; padding:7px 9px; border-radius:12px; background:#17213ae8; color:#fff7dc; font-size:11px; }
@@ -41,7 +40,7 @@ button { touch-action:manipulation; }
   .game-phone__launcher { width:48px !important; height:48px !important; }
   .game-phone__launcher-image { width:100% !important; height:100% !important; }
   .game-phone--open { position:fixed !important; inset:8px max(10px, env(safe-area-inset-right)) 8px auto !important; }
-  .game-phone__device { width:min(360px,60vw) !important; height:100% !important; padding:8px 8px 48px !important; }
+  .game-phone__device { width:min(var(--phone-width,360px),60vw) !important; height:100% !important; padding:8px 8px 48px !important; }
   .game-phone__screen { height:100% !important; min-height:0 !important; }
   .game-phone button { min-height:44px; }
   .game-phone__app-grid { overflow:visible; max-height:none; gap:12px 8px; padding-bottom:8px; }
@@ -49,7 +48,18 @@ button { touch-action:manipulation; }
   .game-phone__screen-modal-card { max-height:calc(100dvh - 20px) !important; }
   .game-tour__spotlight { display:none; }
   .game-tour__card { inset:50% auto auto 50% !important; transform:translate(-50%,-50%) !important; width:min(460px,85vw) !important; max-height:calc(100dvh - 24px); overflow-y:auto; }
-  .fuel-card, .service-modal__panel, .sleep-modal > div, .treatment-modal > div, .energy-depleted__card, .game-over__panel, .dealership, .loan-document, .estate, .business, .race-card, .route-complete__panel, .character-encounter__card { max-height:calc(100dvh - 24px) !important; max-width:calc(100vw - 32px) !important; min-height:0 !important; overflow-y:auto !important; }
+  .fuel-card,
+.service-modal__panel,
+.sleep-modal > div,
+.treatment-modal > div,
+.energy-depleted__card,
+.game-over__panel,
+.dealership,
+.estate,
+.business,
+.race-card,
+.route-complete__panel,
+.character-encounter__card { max-height:calc(100dvh - 24px) !important; max-width:calc(100vw - 32px) !important; min-height:0 !important; overflow-y:auto !important; }
   .service-prompt { bottom:96px !important; max-width:min(320px,48vw) !important; }
   .world-map__player-warning, .world-map__objective-notice { top:72px !important; max-width:46vw !important; padding:7px !important; }
 }
@@ -85,11 +95,33 @@ button { touch-action:manipulation; }
     padding:max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
     overflow-y:auto; overscroll-behavior:contain;
   }
-  .fuel-card, .service-modal__panel, .sleep-modal > div, .treatment-modal > div, .energy-depleted__card, .game-over__panel, .dealership, .loan-document, .bank-card, .estate, .business, .race-card, .route-complete__panel, .character-encounter__card, .game-phone__screen-modal-card {
+  .fuel-card,
+.service-modal__panel,
+.sleep-modal > div,
+.treatment-modal > div,
+.energy-depleted__card,
+.game-over__panel,
+.dealership,
+.bank-card,
+.estate,
+.business,
+.race-card,
+.route-complete__panel,
+.character-encounter__card,
+.game-phone__screen-modal-card {
     max-height:var(--mobile-modal-height) !important; max-width:calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)) !important;
     min-width:0 !important; min-height:0 !important; overflow-y:auto !important; overscroll-behavior:contain; touch-action:pan-y; box-sizing:border-box;
   }
-  .fuel-card, .service-modal__panel, .sleep-modal > div, .treatment-modal > div, .energy-depleted__card, .game-over__panel, .loan-document, .bank-card, .race-card, .route-complete__panel, .game-phone__screen-modal-card { padding:16px !important; }
+  .fuel-card,
+.service-modal__panel,
+.sleep-modal > div,
+.treatment-modal > div,
+.energy-depleted__card,
+.game-over__panel,
+.bank-card,
+.race-card,
+.route-complete__panel,
+.game-phone__screen-modal-card { padding:16px !important; }
   .character-encounter__card { width:min(760px,100%) !important; grid-template-columns:minmax(100px,28%) minmax(0,1fr) !important; }
   .character-encounter__portrait-frame { min-height:0 !important; height:min(240px,60dvh); }
   .character-encounter__copy { min-width:0; padding:16px !important; justify-content:flex-start; }
@@ -121,4 +153,10 @@ button { touch-action:manipulation; }
     user-select:text;
     -webkit-touch-callout:default;
   }
+}
+
+/* Leave a dedicated bottom row for title-screen display/install actions. */
+@media (pointer:coarse) and (orientation:landscape) {
+  .game-menu:not(.game-menu--paused) { padding-bottom:72px !important; }
+  .game-menu:not(.game-menu--paused) .game-menu__card { height:calc(100dvh - 88px) !important; max-height:calc(100dvh - 88px) !important; }
 }

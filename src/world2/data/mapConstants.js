@@ -1,3 +1,5 @@
+import { GRID_SIZE as MAIN_GRID_SIZE } from '../../world/data/mapConstants.js';
+export const WORLD_MIN_Y = -MAIN_GRID_SIZE;
 export {
   getCameraDimensions,
   CAMERA_HEIGHT,
@@ -13,7 +15,6 @@ export {
   WORLD_MAX_X,
   WORLD_MAX_Y,
   WORLD_MIN_X,
-  WORLD_MIN_Y,
   WORLD_WIDTH,
   createTiledDistrictBlocks,
   gridRect,

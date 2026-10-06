@@ -1,0 +1,186 @@
+[
+  {
+    "kind": "foodParkingZones",
+    "id": "residential-food-shop-parking",
+    "sellerType": "shop",
+    "x": 960,
+    "y": 480,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "healthParkingZones",
+    "id": "general-hospital-parking",
+    "providerType": "public-hospital",
+    "x": 3120,
+    "y": 480,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "residential-pump-1",
+    "x": 2280,
+    "y": 360,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "residential-pump-2",
+    "x": 2280,
+    "y": 480,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "bankParkingZones",
+    "id": "work-bank-loan-parking",
+    "x": 5880,
+    "y": 1680,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "dealershipParkingZones",
+    "id": "work-dealership-parking",
+    "x": 4320,
+    "y": 1800,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "foodParkingZones",
+    "id": "work-restaurant-food-parking",
+    "sellerType": "restaurant",
+    "x": 6360,
+    "y": 1680,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "foodParkingZones",
+    "id": "work-supermarket-parking",
+    "sellerType": "supermarket",
+    "x": 6240,
+    "y": 360,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "businessOfficeParkingZones",
+    "id": "work-office-hub-business-parking",
+    "x": 5880,
+    "y": 600,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "work-pump-1",
+    "x": 3840,
+    "y": 1680,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "work-pump-2",
+    "x": 4080,
+    "y": 1680,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "foodParkingZones",
+    "id": "wealthy-supermarket-parking",
+    "sellerType": "supermarket",
+    "x": 2040,
+    "y": 3000,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "foodParkingZones",
+    "id": "wealthy-restaurant-food-parking",
+    "sellerType": "restaurant",
+    "x": 2400,
+    "y": 3360,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "healthParkingZones",
+    "id": "private-clinic-parking",
+    "providerType": "private-clinic",
+    "x": 240,
+    "y": 3600,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "wealthy-pump-1",
+    "x": 3600,
+    "y": 2400,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "wealthy-pump-2",
+    "x": 3480,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "foodParkingZones",
+    "id": "nightlife-restaurant-food-parking",
+    "sellerType": "restaurant",
+    "x": 6360,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "nightlife-pump-1",
+    "x": 6480,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "fuelPumps",
+    "id": "nightlife-pump-2",
+    "x": 6720,
+    "y": 2640,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "drivingSchoolParkingZones",
+    "id": "bolade-driving-school-test-bay",
+    "x": 960,
+    "y": 1560,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "estateAgencyParkingZones",
+    "id": "work-estate-agency-parking",
+    "x": 5040,
+    "y": 1800,
+    "width": 120,
+    "height": 120
+  },
+  {
+    "kind": "repairZones",
+    "id": "residential-mechanic-repair-bay",
+    "x": 1680,
+    "y": 720,
+    "width": 120,
+    "height": 120
+  }
+]

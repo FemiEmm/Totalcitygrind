@@ -1,12 +1,4 @@
-import {
-  WORLD_HEIGHT,
-  WORLD_MAX_X,
-  WORLD_MAX_Y,
-  WORLD_MIN_X,
-  WORLD_MIN_Y,
-  WORLD_WIDTH,
-  obstacles,
-} from "../data/worldMap.js";
+import { WORLD_MAX_X, WORLD_MAX_Y, WORLD_MIN_X, WORLD_MIN_Y, obstacles } from "../data/worldMap.js";
 
 const COLLISION_EPSILON = 0.0001;
 const OBSTACLE_SPATIAL_CELL_SIZE = 240;

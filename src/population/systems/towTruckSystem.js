@@ -645,74 +645,9 @@ function buildRoundTripPlan({
   };
 }
 
-function vehicleOverlapsAnyReservedTile(
-  vehicle,
-  reservedTileKeys,
-) {
-  const vehicleShape = createSolidVehicleShape(
-    {
-      width: vehicle.collisionWidth ?? vehicle.width,
-      length: vehicle.collisionLength ?? vehicle.length,
-    },
-    vehicle,
-  );
 
-  for (const key of reservedTileKeys) {
-    const [columnText, rowText] = key.split(":");
-    const column = Number(columnText);
-    const row = Number(rowText);
-    const tileShape = createSolidVehicleShape(
-      {
-        width: GRID_SIZE,
-        length: GRID_SIZE,
-      },
-      {
-        x: (column + 0.5) * GRID_SIZE,
-        y: (row + 0.5) * GRID_SIZE,
-        rotation: 0,
-      },
-    );
 
-    if (solidVehiclesOverlap(vehicleShape, tileShape)) {
-      return true;
-    }
-  }
 
-  return false;
-}
-
-function reserveRoundTrip(state, truck, trafficState) {
-  for (const key of truck.reservedTileKeys) {
-    const owner = state.reservedTileOwners.get(key);
-    if (owner && owner !== truck.id) {
-      return false;
-    }
-  }
-
-  truck.reservedTileKeys.forEach((key) => {
-    state.reservedTileOwners.set(key, truck.id);
-  });
-
-  // Vehicles already inside the reserved corridor may finish leaving it.
-  // No new civilian vehicle may enter after this snapshot.
-  const incumbentVehicleIds = new Set(
-    trafficState.vehicles
-      .filter((vehicle) => {
-        return vehicleOverlapsAnyReservedTile(
-          vehicle,
-          truck.reservedTileKeys,
-        );
-      })
-      .map((vehicle) => vehicle.id),
-  );
-
-  state.corridorAllowedVehicleIds.set(
-    truck.id,
-    incumbentVehicleIds,
-  );
-
-  return true;
-}
 
 function assignReportedTrafficJob({
   state,

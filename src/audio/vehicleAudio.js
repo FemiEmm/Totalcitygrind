@@ -1,3 +1,4 @@
+import { createManagedAudio } from "./audioLifecycle.js";
 import { ref } from "vue";
 
 const VEHICLE_SOUNDS = Object.freeze({
@@ -118,7 +119,7 @@ function createAudio(source) {
     return null;
   }
 
-  return new Audio(source);
+  return createManagedAudio(source);
 }
 
 function safePlay(audio) {

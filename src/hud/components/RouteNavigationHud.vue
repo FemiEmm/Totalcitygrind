@@ -78,7 +78,7 @@ const distanceLabel = computed(() => {
   color: #ddd3b8;
   font-family: "Basic", sans-serif;
   pointer-events: none;
-  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 65%));
+  filter: none;
   transform: translateX(-50%);
 }
 
@@ -138,7 +138,7 @@ const distanceLabel = computed(() => {
   background: transparent;
   font-size: 17px;
   place-items: center;
-  filter: drop-shadow(0 1px 1px #000);
+  filter: none;
   transform: translateX(-50%);
 }
 
@@ -161,7 +161,7 @@ const distanceLabel = computed(() => {
 .route-navigation__destination > i {
   color: #e0443b;
   font-size: 18px;
-  filter: drop-shadow(0 1px 1px #000);
+  filter: none;
 }
 
 .route-navigation__destination > span {

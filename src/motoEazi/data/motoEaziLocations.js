@@ -11,9 +11,9 @@ const districts = [
   nightlife,
 ];
 const coverageLocationNames = Object.freeze({
-  "starting-residential": Object.freeze(["Bolade Street", "Ajayi Close", "Unity Crescent", "Adeniran Junction", "Olaniyi Road", "Peace Estate Gate", "Akinola Avenue", "Community School Corner"]),
+  "starting-residential": Object.freeze(["Bolade Street", "Ajayi Close", "Unity Crescent", "Adeniran Junction", "Olaniyi Road", "Peace Estate Entrance", "Akinola Avenue", "Community School Corner"]),
   "work-hub": Object.freeze(["Commerce Street", "Marina Office Gate", "Labour House Junction", "Tinubu Market Road", "Enterprise Avenue", "Railway Quarter", "Factory Lane", "Central Exchange"]),
-  "wealthy-residential": Object.freeze(["Admiralty Gardens", "Sapphire Close", "Royal Palm Avenue", "Victoria Estate Gate", "Lagoon Crescent", "Embassy Row", "Diamond Court", "Heritage Villas"]),
+  "wealthy-residential": Object.freeze(["Admiralty Gardens", "Sapphire Close", "Royal Palm Avenue", "Victoria Estate Entrance", "Lagoon Crescent", "Embassy Row", "Diamond Court", "Heritage Villas"]),
   nightlife: Object.freeze(["Night and Glam Club Stop", "Rhythm Avenue", "Moonlight Junction", "Carnival Street", "Sunset Lounge", "Freedom Bar Corner", "Starlight Hotel Gate", "After Hours Boulevard"]),
 });
 
@@ -23,28 +23,28 @@ const coverageLocationNames = Object.freeze({
 // but are never added to the Moto Eazi passenger pool.
 const roadsideDefinitions = {
   "starting-residential": [
-    ["Home Junction Roadside", 6.5, 7.5],
+    ["Alakuko Roadside", 6.5, 7.5],
     ["Community Avenue West", 9.5, 7.5],
-    ["Estate Gate Roadside", 21.5, 8.5],
+    ["Abule Oki Roadside", 21.5, 8.5],
     ["Clinic Junction Roadside", 18.5, 7.5],
-    ["East Link Roadside", 29.5, 11.5],
+    ["Pleasure Roadside", 29.5, 11.5],
   ],
   "work-hub": [
-    ["Terminal West Gate", 3.5, 7.5],
+    ["Ile Epo Roadside", 3.5, 7.5],
     ["Office Street", 19.5, 4.5],
     ["Market Junction", 14.5, 10.5],
-    ["Dealership Roadside", 9.5, 14.5],
-    ["Interchange Roadside", 23.5, 13.5],
+    ["Sogunle Roadside", 9.5, 14.5],
+    ["Oshodi Roadside", 23.5, 13.5],
   ],
   "wealthy-residential": [
-    ["Estate North Gate", 7.5, 6.5],
+    ["Egbeda Gate", 7.5, 6.5],
     ["Shopping Avenue", 14.5, 9.5],
     ["Hospital Roadside", 3.5, 13.5],
-    ["South Estate Roadside", 12.5, 14.5],
+    ["Ikotun Roadside", 12.5, 14.5],
     ["Private Hotel Roadside", 24.5, 10.5],
   ],
   nightlife: [
-    ["Club Strip West", 3.5, 9.5],
+    ["Isolo West", 3.5, 9.5],
     ["Event Centre Roadside", 13.5, 6.5],
     ["Hotel Strip", 21.5, 10.5],
     ["Beach Roadside", 27.5, 14.5],
