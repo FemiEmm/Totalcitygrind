@@ -95,6 +95,28 @@ async function executeGameRequest(action, payload = {}) {
     connection.server = 'Connected'; connection.backend = 'Connected'; return result;
   } catch (error) { connection.error = error.message; throw error; }
 }
+
+export function emergencyGameRequest(action, payload = {}) {
+  const token = session?.access_token;
+  if (!token || !connection.user?.id) return false;
+  const input = {
+    requestTime: Date.now(),
+    ...payload,
+    requestId: payload.requestId || globalThis.crypto?.randomUUID?.() || ('request-' + Date.now() + '-' + Math.random().toString(36).slice(2)),
+  };
+  try {
+    void fetch(server + '/api/game', {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ action, ...input }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function bootstrapAccount() {
   const data = await gameRequest('bootstrap');
   connection.home = data.home; connection.homesAvailable = data.homes.filter(home => home.available).length;

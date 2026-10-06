@@ -29,21 +29,28 @@ export function economyAction(db,input){
  const before=e.money,beforeTransaction=e.nextTransactionNumber,beforeExpenses=e.totalExpenses;let result={success:true},taxable=false,label=op,marketContext={};const events=[];
  const check=r=>{if(!r?.success)throw Error('Action unavailable or insufficient funds.');return r;};
  if(op==='status')return result;
- if(op==='day-close'){
-  const closedDay=Math.max(1,Math.floor(Number(input.closedDay)||0));
+ if(op==='day-close'||op==='session-checkpoint'){
+  const isDayClose=op==='day-close';
+  const closedDay=isDayClose?Math.max(1,Math.floor(Number(input.closedDay)||0)):null;
   const financial=input.financialState;
-  if(!financial||typeof financial!=='object')throw Error('Missing day-end financial state.');
+  if(!financial||typeof financial!=='object')throw Error('Missing checkpoint financial state.');
   if(!Number.isFinite(financial.economyState?.money)||Math.abs(financial.economyState.money)>1e12)throw Error('Invalid closing balance.');
   for(const key of FINANCIAL_FIELDS){
-   if(financial[key]===undefined)throw Error('Incomplete day-end financial state.');
+   if(financial[key]===undefined)throw Error('Incomplete checkpoint financial state.');
    s[key]=structuredClone(financial[key]);
   }
   s.economyState.money=Math.round(s.economyState.money);
   if(Math.round(Number(input.closingBalance))!==s.economyState.money)throw Error('Closing balance mismatch.');
-  // One trusted daily checkpoint replaces all ordinary daytime economy calls.
-  // Advance the server clock to the start of the next game day if needed.
-  w.originMinute=Math.max(w.originMinute,closedDay*1440);
-  result={success:true,closedDay,closingBalance:s.economyState.money};
+  if(isDayClose){
+   // One trusted daily checkpoint replaces all ordinary daytime economy calls.
+   w.originMinute=Math.max(w.originMinute,closedDay*1440);
+  }else{
+   const clock=input.snapshot?.gameClock;
+   const day=Math.max(1,Math.floor(Number(clock?.day)||1));
+   const minute=Math.max(0,Math.min(1439,Math.floor(Number(clock?.minuteOfDay)||0)));
+   w.originMinute=(day-1)*1440+minute;
+  }
+  result={success:true,closingBalance:s.economyState.money,...(isDayClose?{closedDay}:{checkpoint:true})};
   Object.assign(db.profiles[input.playerId],{
    money:s.economyState.money,
    owned_vehicle_ids:['starter-danfo',...new Set(s.economyState.ownedVehicleIds||[])],
@@ -51,7 +58,7 @@ export function economyAction(db,input){
    customization:structuredClone(s.customizationState||{}),
    updated_at:new Date().toISOString(),
   });
-  label='DAY END ECONOMY SYNC';
+  label=isDayClose?'DAY END ECONOMY SYNC':'SESSION CHECKPOINT';
  }
  else if(op==='transport-stop')return settleTransportStop(w,input);
  else if(op==='transport-route')return settleTransportRoute(w,input);

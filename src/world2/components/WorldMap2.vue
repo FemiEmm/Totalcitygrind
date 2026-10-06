@@ -8216,6 +8216,11 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
 <style scoped>
 .world-map {
   position: relative;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -8223,6 +8228,10 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
 }
 
 .world-map__canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   display: block;
   width: 100%;
   height: 100%;

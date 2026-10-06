@@ -174,9 +174,9 @@ export function gameState(input){
   const trusted={...input,money:w.state.economyState.money,savings:w.state.bankSavingsState.balance,minute:minuteOf(w),day:dayOf(w),gameWeek:Math.floor((dayOf(w)-1)/7),income:w.income,lastReceipt:w.applied[input.action]||0,ack:w.applied.passengers||0};
   if(input.action==='career')trusted.money=w.state.economyState.money;
   if(input.action==='save')trusted.snapshot=protectSnapshot(db,id,input.snapshot);
-  if(input.action==='economy'&&input.op==='day-close')trusted.snapshot=input.snapshot;
+  if(input.action==='economy'&&['day-close','session-checkpoint'].includes(input.op))trusted.snapshot=input.snapshot;
   const result=dispatchGameState(trusted);
-  if(input.action==='economy'&&input.op==='day-close'){
+  if(input.action==='economy'&&['day-close','session-checkpoint'].includes(input.op)){
     const saved=persistGameSnapshot(db,id,protectSnapshot(db,id,trusted.snapshot),input.revision);
     Object.assign(result,saved);
   }
@@ -201,7 +201,7 @@ export function gameState(input){
   }
   // Day-end economy sync is already the final client checkpoint for the closed
   // day. Do not immediately run next-day financial settlement over it.
-  if(!(input.action==='economy'&&input.op==='day-close'))settle(db);
+  if(!(input.action==='economy'&&['day-close','session-checkpoint'].includes(input.op)))settle(db);
   // Project trusted state back into stored saves and bootstrap results.
   if(db.gameStates?.[id])db.gameStates[id].snapshot=protectSnapshot(db,id,db.gameStates[id].snapshot);
   for(const [profileId,wallet] of Object.entries(db.wallets))if(db.profiles[profileId])db.profiles[profileId].bpcWealth=calculateNetWorth(wallet.state,wealthCatalogue);

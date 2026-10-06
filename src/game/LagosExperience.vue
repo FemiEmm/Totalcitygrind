@@ -13,7 +13,7 @@ import {
 
 import { startNewPlayerInventory } from "../player/systems/playerInventory.js";
 import OnlinePanel from '../network/OnlinePanel.vue';
-import { connection, bootstrapAccount, gameRequest, connectWorld, disconnectWorld } from '../network/connection.js';
+import { connection, bootstrapAccount, gameRequest, emergencyGameRequest, connectWorld, disconnectWorld } from '../network/connection.js';
 import { setSaveAccount } from './saveSlots.js';
 import DailyQuestsModal from "./components/DailyQuestsModal.vue";
 import TouchControls from "./components/TouchControls.vue";
@@ -51,6 +51,54 @@ function queueAccountSave() {
   // snapshot is bundled into the single end-of-day economy checkpoint.
   connection.save = 'Local save · server checkpoint at day end';
 }
+
+const ONLINE_FINANCIAL_FIELDS = [
+  'economyState', 'bankSavingsState', 'stockMarketState', 'customizationState',
+  'playerInventory', 'propertyState', 'businessState', 'lifeObligationState',
+  'objectiveState', 'dailyQuestState',
+];
+function currentOnlineCheckpointPacket() {
+  if (!onlineMode.value || !accountReady || !worldStarted.value) return null;
+  if (!activeWorldReference.value?.saveGame?.()) return null;
+  let snapshot = null;
+  try { snapshot = JSON.parse(localStorage.getItem(getSaveStorageKey(1)) || 'null'); } catch { return null; }
+  if (!snapshot) return null;
+  const financialState = {};
+  for (const key of ONLINE_FINANCIAL_FIELDS) {
+    if (snapshot[key] === undefined) return null;
+    financialState[key] = snapshot[key];
+  }
+  return {
+    op: 'session-checkpoint',
+    financialState,
+    closingBalance: Math.round(Number(snapshot.economyState?.money) || 0),
+    snapshot,
+    revision: connection.revision,
+  };
+}
+async function saveOnlineSessionCheckpoint(label = 'Saved') {
+  const packet = currentOnlineCheckpointPacket();
+  if (!packet) return !onlineMode.value;
+  connection.save = 'Saving…';
+  try {
+    const result = await gameRequest('economy', packet);
+    if (Number.isInteger(result.revision)) connection.revision = result.revision;
+    if (result.updatedAt) connection.lastSaved = result.updatedAt;
+    connection.save = label;
+    connection.error = '';
+    return true;
+  } catch (error) {
+    connection.save = 'Local save only · server save failed';
+    connection.error = error?.message || 'Could not save online progress.';
+    return false;
+  }
+}
+function emergencyOnlineSessionCheckpoint() {
+  const packet = currentOnlineCheckpointPacket();
+  if (!packet) return false;
+  return emergencyGameRequest('economy', packet);
+}
+
 const ONLINE_LOAD_ERROR = "Oh oh... Total City Grind is having issues. Relax, we’ll be back up soon.";
 async function enterOnlineCity() {
   if (onlineBusy.value) return;
@@ -326,7 +374,13 @@ function resumeGame() {
 
 async function returnToTitle() {
   if (onlineMode.value) {
-    activeWorldReference.value?.saveGame?.();
+    const saved = await saveOnlineSessionCheckpoint('Saved · main menu');
+    if (!saved) {
+      saveNotice.value = 'SERVER SAVE FAILED · TRY AGAIN';
+      window.clearTimeout(saveNoticeTimer);
+      saveNoticeTimer = window.setTimeout(() => { saveNotice.value = ''; }, 3000);
+      return;
+    }
     worldStarted.value = false;
     await nextTick();
     leaveOnlineAccount();
@@ -408,6 +462,10 @@ function handleAppBackground() {
   if (onlineMode.value && accountReady) activeWorldReference.value?.saveGame?.();
   if (screen.value === "playing") pauseGame();
 }
+function handlePageHide() {
+  if (onlineMode.value && accountReady) emergencyOnlineSessionCheckpoint();
+  handleAppBackground();
+}
 
 function handleVisibilityChange() {
   if (document.hidden && screen.value === "playing") {
@@ -452,7 +510,7 @@ onMounted(() => {
   portraitQuery.addEventListener("change", updateViewport);
   touchQuery.addEventListener("change", updateViewport);
   window.addEventListener("keydown", handleMenuKey);
-  window.addEventListener("pagehide", handleAppBackground);
+  window.addEventListener("pagehide", handlePageHide);
   window.addEventListener("blur", handleAppBackground);
   document.addEventListener(
     "visibilitychange",
@@ -473,7 +531,7 @@ onBeforeUnmount(() => {
   portraitQuery.removeEventListener("change", updateViewport);
   touchQuery.removeEventListener("change", updateViewport);
   window.removeEventListener("keydown", handleMenuKey);
-  window.removeEventListener("pagehide", handleAppBackground);
+  window.removeEventListener("pagehide", handlePageHide);
   window.removeEventListener("blur", handleAppBackground);
   document.removeEventListener(
     "visibilitychange",
@@ -595,7 +653,14 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   background: #111418;
+}
+@media (pointer: coarse) {
+  .game { touch-action: manipulation; }
 }
 
 .game__opening {

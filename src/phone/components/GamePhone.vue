@@ -3254,6 +3254,11 @@ function repayLoan() {
   font-family: "Basic", sans-serif;
 }
 
+/* Tablet landscape: lift the phone by roughly one quarter of its own height. */
+@media (pointer: coarse) and (min-width: 701px) and (max-width: 1400px) {
+  .game-phone { transform: translateY(-25%); }
+}
+
 
 .game-phone__screen-modal { position: fixed; inset: 0; z-index: 9999999; display: grid; place-items: center; box-sizing: border-box; padding: 24px; overflow-y: auto; background: rgb(8 15 31 / 78%); font-family: "Basic", sans-serif; backdrop-filter: blur(5px); }
 .game-phone__screen-modal-card { box-sizing: border-box; width: min(680px, 100%); max-height: min(780px, calc(100vh - 48px)); padding: 22px; overflow-y: auto; border: 1px solid rgb(23 33 58 / 16%); border-radius: 24px; background: #fff8dc; color: #14213d; box-shadow: 0 2px 8px rgb(23 33 58 / 10%); }

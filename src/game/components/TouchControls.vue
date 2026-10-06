@@ -73,23 +73,19 @@ button.held { background:#65d6ee; color:#17213a; transform:translateY(2px); }
 .touch-controls__utility button { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
 .touch-controls__utility i { font-size:14px; }
 @media (max-width:700px) { button { width:54px; height:58px; } .touch-controls { gap:8px; } .touch-controls__utility, .touch-controls__gears { gap:5px; } .touch-controls__utility button, .touch-controls__gears button { height:44px; width:48px; } }
-/* Enlarge touch hit areas without changing desktop controls or scaling the grid. */
-@media (pointer: coarse) {
+/* iPad/tablet touch controls only: larger targets while phone and desktop stay unchanged. */
+@media (pointer: coarse) and (min-width:701px) and (max-width:1400px) {
   button { width:80px; height:80px; border-radius:22.5px; }
   .touch-controls__steering i { font-size:40px; }
   .touch-controls__utility button, .touch-controls__gears button { width:65px; height:55px; border-radius:15px; font-size:12.5px; }
   .touch-controls__utility i { font-size:17.5px; }
 }
-@media (pointer: coarse) and (max-width:700px) {
-  button { width:67.5px; height:72.5px; }
-  .touch-controls__utility button, .touch-controls__gears button { width:60px; height:55px; }
-}
 /* Keep pedal labels inside their hit areas without splitting words. */
 button { padding:4px; line-height:1.15; }
 button > span { display:block; max-width:100%; white-space:normal; overflow-wrap:normal; word-break:normal; }
 button.accelerator { font-size:11px; letter-spacing:0; }
-@media (pointer:coarse) and (min-width:701px) { button.accelerator { font-size:13px; } }
+@media (pointer:coarse) and (min-width:701px) and (max-width:1400px) { button.accelerator { font-size:13px; } }
 @media (max-width:700px) { button.accelerator { font-size:9px; } }
-@media (pointer:coarse) and (max-width:700px) { button.accelerator { font-size:11px; } }
+
 .touch-controls--ignition-only .touch-controls__utility button { width:88px; height:56px; font-size:12px; }
 </style>
