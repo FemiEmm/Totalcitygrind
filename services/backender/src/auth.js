@@ -42,15 +42,16 @@ export async function signup(body) {
   const fullName=displayName(body.data?.full_name);
   const name=username;
   const email=typeof body.email==='string'?body.email.trim().toLowerCase():'';
-  if(email&&(!/^\S+@\S+\.\S+$/.test(email)||email.length>254)) throw new ApiError(400,'Provide a valid email or leave it empty');
+  if(!email) throw new ApiError(400,'Email is required');
+  if(!/^\S+@\S+\.\S+$/.test(email)||email.length>254) throw new ApiError(400,'Provide a valid email address');
   if(body.data?.age_confirmed!==true||body.data?.terms_accepted!==true||body.data?.terms_version!=='2026-10-05') throw new ApiError(400,'Confirm you are 18 or older and accept the Terms and Privacy Policy');
   const salt=randomBytes(16).toString('hex');
   const hash=Buffer.from(await derive(password,salt,64)).toString('hex');
   return transaction(db=>{
-    if(email&&Object.values(db.users).some(user=>user.email===email)) throw new ApiError(422,'An account already exists for this email','user_already_exists');
+    if(Object.values(db.users).some(user=>user.email===email)) throw new ApiError(422,'An account already exists for this email','user_already_exists');
     if(Object.values(db.users).some(user=>(user.username||'').toLowerCase()===username.toLowerCase())) throw new ApiError(422,'That username is taken','username_taken');
     const id=randomUUID(),created_at=new Date().toISOString();
-    const user={id,email:email||null,username,full_name:fullName,display_name:name,salt,passwordHash:hash,created_at,agreement:{version:body.data.terms_version,accepted_at:created_at,age_confirmed:true}};
+    const user={id,email,username,full_name:fullName,display_name:name,salt,passwordHash:hash,created_at,agreement:{version:body.data.terms_version,accepted_at:created_at,age_confirmed:true}};
     db.users[id]=user;
     db.profiles[id]={id,display_name:name,money:0,owned_vehicle_ids:['starter-danfo'],inventory:{},customization:{owned:{sticker:[],paint:[],phone:[]},vehicles:{},phone:null},progression:{},created_at,updated_at:created_at};
     return issue(db,user);

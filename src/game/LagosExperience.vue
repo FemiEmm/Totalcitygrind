@@ -13,7 +13,7 @@ import {
 
 import { startNewPlayerInventory } from "../player/systems/playerInventory.js";
 import OnlinePanel from '../network/OnlinePanel.vue';
-import { connection, bootstrapAccount, gameRequest, uploadSave, connectWorld, disconnectWorld } from '../network/connection.js';
+import { connection, bootstrapAccount, gameRequest, connectWorld, disconnectWorld } from '../network/connection.js';
 import { setSaveAccount } from './saveSlots.js';
 import DailyQuestsModal from "./components/DailyQuestsModal.vue";
 import TouchControls from "./components/TouchControls.vue";
@@ -43,42 +43,26 @@ const onlineBusy = ref(false);
 const unavailableHomes = ref([]);
 const onlineHomePrices = ref({});
 let accountReady = false;
-let pendingUpload = null;
-let uploadPromise = null;
-let uploadTimer = null;
 let autosaveTimer = null;
 let saveConflict = false;
 function queueAccountSave() {
   if (!onlineMode.value || !accountReady || saveConflict) return;
-  pendingUpload = localStorage.getItem(getSaveStorageKey());
-  connection.save = 'Waiting to sync';
-  clearTimeout(uploadTimer);
-  uploadTimer = setTimeout(() => { void flushAccountSave(); }, 1200);
-}
-async function flushAccountSave() {
-  clearTimeout(uploadTimer);
-  if (uploadPromise) { await uploadPromise; if (pendingUpload) return flushAccountSave(); return; }
-  if (!pendingUpload || !onlineMode.value || saveConflict) return;
-  const raw = pendingUpload; pendingUpload = null;
-  uploadPromise = uploadSave(JSON.parse(raw)).catch(error => {
-    if (error.status === 409) { saveConflict = true; pendingUpload = null; }
-    connection.error = error.message;
-  });
-  await uploadPromise; uploadPromise = null;
-  if (pendingUpload) return flushAccountSave();
+  // Autosaves remain entirely local during the in-game day. The full account
+  // snapshot is bundled into the single end-of-day economy checkpoint.
+  connection.save = 'Local save · server checkpoint at day end';
 }
 const ONLINE_LOAD_ERROR = "Oh oh... Total City Grind is having issues. Relax, we’ll be back up soon.";
 async function enterOnlineCity() {
   if (onlineBusy.value) return;
   onlineBusy.value = true; connection.error = '';
-  accountReady = false; pendingUpload = null; clearTimeout(uploadTimer);
+  accountReady = false;
   let cachedSaveKey = null, previousCachedSave = null;
   try {
     const data = await bootstrapAccount();
     worldStarted.value = false;
     await nextTick();
     setSaveAccount(connection.user.id); setActiveSaveSlotId(1); activeSaveSlot.value = 1;
-    onlineMode.value = true; accountReady = false; saveConflict = false; pendingUpload = null;
+    onlineMode.value = true; accountReady = false; saveConflict = false;
     unavailableHomes.value = data.homes.filter(home => !home.available).map(home => home.id); onlineHomePrices.value=Object.fromEntries(data.homes.map(home=>[home.id,home.weeklyRent]));
     if (data.save) {
       const snapshot = data.save.snapshot;
@@ -102,7 +86,7 @@ async function enterOnlineCity() {
     } else { playGame(1); }
     onlinePanelOpen.value = false;
   } catch (error) {
-    accountReady = false; pendingUpload = null; clearTimeout(uploadTimer);
+    accountReady = false;
     worldStarted.value = false; screen.value = 'title'; tourVisible.value = false;
     if (cachedSaveKey) {
       try {
@@ -119,7 +103,7 @@ async function enterOnlineCity() {
   finally { onlineBusy.value = false; }
 }
 function leaveOnlineAccount() {
-  disconnectWorld(); accountReady = false; onlineMode.value = false; pendingUpload = null;
+  disconnectWorld(); accountReady = false; onlineMode.value = false;
   setSaveAccount(null); refreshSaveSlots();
 }
 const TOUR_STORAGE_KEY = "total-city-grind-tour-v2";
@@ -343,7 +327,6 @@ function resumeGame() {
 async function returnToTitle() {
   if (onlineMode.value) {
     activeWorldReference.value?.saveGame?.();
-    await flushAccountSave();
     worldStarted.value = false;
     await nextTick();
     leaveOnlineAccount();
@@ -422,7 +405,7 @@ function handleMenuKey(event) {
 }
 
 function handleAppBackground() {
-  if (onlineMode.value && accountReady) { activeWorldReference.value?.saveGame?.(); void flushAccountSave(); }
+  if (onlineMode.value && accountReady) activeWorldReference.value?.saveGame?.();
   if (screen.value === "playing") pauseGame();
 }
 
@@ -440,7 +423,7 @@ function handleVisibilityChange() {
 
 watch(() => onlineMode.value && worldStarted.value && activeWorld.value === 'mainland' && (screen.value === 'playing' || screen.value === 'paused'), enabled => {
   if (enabled) connectWorld(() => worldMapReference.value?.getNetworkPose?.(), async () => {
-    if (accountReady) { activeWorldReference.value?.saveGame?.(); await flushAccountSave(); }
+    if (accountReady) activeWorldReference.value?.saveGame?.();
   });
   else disconnectWorld();
 }, { flush: 'post' });
@@ -486,7 +469,7 @@ onBeforeUnmount(() => {
   if (LOCAL_STUDIO) { delete window.tcgStudioStart; delete window.tcgStudioResume; }
   window.removeEventListener('tcg:police-teleport', reconnectAfterPoliceTransfer);
   window.removeEventListener('tcg:game-saved', queueAccountSave);
-  clearInterval(autosaveTimer); clearTimeout(uploadTimer); disconnectWorld();
+  clearInterval(autosaveTimer); disconnectWorld();
   portraitQuery.removeEventListener("change", updateViewport);
   touchQuery.removeEventListener("change", updateViewport);
   window.removeEventListener("keydown", handleMenuKey);

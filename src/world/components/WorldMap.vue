@@ -564,7 +564,6 @@ const economyState = reactive(
 const bankSavingsState = reactive(createBankSavingsState(gameClock.day));
 const customizationState = reactive(createCustomizationState());
 function handleCustomizeVehicle({ kind, id }) {
-  if(getSaveAccount()){return onlineMoney('customize',{kind,id,vehicleId:activeVehicleConfig.value.id});}
   const result = applyCustomization(customizationState, activeVehicleConfig.value.id, kind, id, economyState.money);
   if (!result.ok) return;
   if (result.price > 0) chargeExpense({ economyState, amount: result.price, type: 'vehicle-customization', label: result.label, config: DANFO_ECONOMY_CONFIG });
@@ -574,13 +573,12 @@ let agberoPaymentSequence = 0;
 const stockMarketState = reactive(createStockMarketState());
 const stockMarketView = computed(() => getStockMarketView(stockMarketState));
 const bankMessageFeed = computed(() => {
-  return [...bankSavingsState.messages, ...(getSaveAccount() ? (connection.wallet?.transactions ?? economyState.transactions) : economyState.transactions)].sort(
+  return [...bankSavingsState.messages, ...economyState.transactions].sort(
     (left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0),
   );
 });
 
 function processStockMarketUpdate() {
-  if(getSaveAccount())return [];
   sampleMarketDeposits(stockMarketState, gameClock.day, gameClock.minuteOfDay, bankSavingsState.balance);
   return updateStockMarketForDay(stockMarketState, gameClock.day, (amount) => {
     if (economyState.money < amount) return false;
@@ -589,7 +587,6 @@ function processStockMarketUpdate() {
   });
 }
 function handleSubscribeStockAdviser() {
-  if(getSaveAccount()){return onlineMoney('subscribe-adviser');}
   const cost = subscribeStockAdviser(stockMarketState, gameClock.day, economyState.money);
   if (cost !== null) {
     if (cost > 0) chargeExpense({ economyState, amount: cost, type: "stock-adviser", label: "STOCK ADVISER - 7 DAYS", config: DANFO_ECONOMY_CONFIG });
@@ -597,12 +594,10 @@ function handleSubscribeStockAdviser() {
   }
 }
 function handleCancelStockAdviser() {
-  if(getSaveAccount()){return onlineMoney('cancel-adviser');}
   cancelStockAdviser(stockMarketState, gameClock.day);
   saveGame();
 }
 function handleReadStockAdviser() {
-  if(getSaveAccount()){return onlineMoney('read-adviser');}
   stockMarketState.adviser.readThrough = stockMarketState.adviser.nextId - 1;
 }
 
@@ -706,7 +701,6 @@ function showObjectiveNotice(objectiveId) {
 }
 
 function handleObjectiveEvent(type, amount = 1) {
-  if(getSaveAccount()){if(['welcome-read','find-job-opened'].includes(type))void onlineMoney('ui-progress',{event:type});return;}
   const result = recordObjectiveEvent({
     state: objectiveState,
     definitions: OBJECTIVE_DEFINITIONS,
@@ -762,7 +756,6 @@ function handleObjectiveEvent(type, amount = 1) {
 }
 
 function processCurrentLifeObligations() {
-  if(getSaveAccount())return;
   const events = processLifeObligationDay({
     state: lifeObligationState,
     currentDay: gameClock.day,
@@ -801,7 +794,6 @@ function handleRentalRemoval(propertyId) { void housing.act({op:'unlist',propert
 function handleLateRentalAction() { showPlayerWarning('housing','HOUSING','Manage your houses in the Housing app.'); }
 
 function processCurrentBusinessIncome() {
-  if(getSaveAccount())return;
   const result = processBusinessDay({
     state: businessState,
     currentDay: gameClock.day,
@@ -1111,7 +1103,6 @@ function freezeForPolice() {
   pressedKeys.clear(); player.speed = 0; stopPlayerVehicleEngine(); activeServiceModal.value = null;
 }
 function payPoliceBribe() {
-  if(getSaveAccount())return onlineMoney('police-bribe',{},()=>{crimeState.score=heist.locked()?100:0;crimeState.status='free';crimeState.bribe=0;policeError.value='';});
   if(crimeState.heistCustody || (heist.active.value && heist.view.value?.account.loot > 0))return;
   if (policeStationRequest || crimeState.status !== 'arrested' || economyState.money < crimeState.bribe) return;
   chargeExpense({ economyState, amount:crimeState.bribe, type:'police-bribe', label:'POLICE BRIBE', config:DANFO_ECONOMY_CONFIG });
@@ -4840,6 +4831,7 @@ function updateGameSimulation(deltaSeconds) {
     });
 
     if (gameClock.day !== previousDay) {
+      void syncOnlineEconomyDayClose(previousDay);
       offerBankLoan({
         economyState,
         currentDay: gameClock.day,
@@ -4928,14 +4920,17 @@ function updateGameSimulation(deltaSeconds) {
       }
 
       if (employmentState.selectedJob === "danfo") {
-        const payment = getSaveAccount() ? passengerResult.agberoPayment : chargeAgberoPickup({
+        const onlineRoute = Boolean(getSaveAccount());
+        const payment = chargeAgberoPickup({
           economyState, currentDay: gameClock.day,
           boardedCount: passengerResult.chargeAgbero ? passengerResult.boardedCount : 0, config: DANFO_ECONOMY_CONFIG,
+          optimistic: onlineRoute,
         });
         if (payment) agberoPayment.value = { ...payment, id: ++agberoPaymentSequence };
         addPassengerFare(
           economyState,
           passengerResult.fareEarned,
+          { optimistic: onlineRoute },
         );
         handleObjectiveEvent(
           "income-earned",
@@ -4988,6 +4983,7 @@ function updateGameSimulation(deltaSeconds) {
             type: "brt-salary",
             label: `BRT SALARY · ${routeEvent.route.name}`,
             config: DANFO_ECONOMY_CONFIG,
+            optimistic: Boolean(getSaveAccount()),
           });
           economyState.lastRouteBonus = brtSalary;
           handleObjectiveEvent(
@@ -5008,7 +5004,7 @@ function updateGameSimulation(deltaSeconds) {
       !isDrivingDanfo.value &&
       !isDrivingBrt.value
     ) {
-      if(getSaveAccount()){void pollOnlineMoto();}else {
+      {
       updateMotoEaziOffers({
         state: motoEaziState,
         requests: MOTO_EAZI_REQUESTS,
@@ -5685,7 +5681,6 @@ defineExpose({
 });
 
 function handleMechanicCall() {
-  if(getSaveAccount()){return onlineMoney(propertyState.starterHomeRisk?.missingCarPart?'car-part':'repair',{damage:hudState.damage},r=>{if(r.damage!=null)hudState.damage=r.damage;playGameSound('mechanicRepair',{loop:false});});}
   if (economyState.gameOver) return;
   if (propertyState.starterHomeRisk?.missingCarPart) {
     const replacementCost = 12000;
@@ -5705,7 +5700,6 @@ function handleMechanicCall() {
   }
 }
 function handleFuelAttendantCall() {
-  if(getSaveAccount()){return onlineMoney('roadside-fuel',{currentFuel:hudState.fuel,litres:'full'},r=>{hudState.fuel=r.fuel;saveActiveVehicleCondition();});}
   if (economyState.gameOver) return;
 
   const quote = roadsideFuelQuote.value;
@@ -5783,7 +5777,6 @@ function purchaseHealthTreatment({
 }
 
 function handleHealthTreatment(options = {}) {
-  if(getSaveAccount()){return onlineMoney('health',{mobile:false,useCoupon:!!options.useCoupon},()=>{restorePlayerHealth(playerStatus,PLAYER_STATUS_CONFIG);closeServiceModal();});}
   const service = nearbyHealthService.value;
 
   if (!service) {
@@ -5803,7 +5796,6 @@ function handleHealthTreatment(options = {}) {
 }
 
 function handleDoctorCall() {
-  if(getSaveAccount()){return onlineMoney('health',{mobile:true},()=>restorePlayerHealth(playerStatus,PLAYER_STATUS_CONFIG));}
   purchaseHealthTreatment({
     provider: "Mobile Doctor",
     cost: PLAYER_STATUS_CONFIG.doctorCallCost,
@@ -5812,7 +5804,6 @@ function handleDoctorCall() {
 }
 
 async function handlePlayerFaint() {
-  if(getSaveAccount()&&!await onlineMoney('hospital-emergency'))return;
   const hospital =
     healthParkingZones.find((zone) => {
       return zone.providerType === "public-hospital";
@@ -5865,7 +5856,6 @@ function handleEnergyDepleted() {
 }
 
 function handleFoodPurchase(itemId) {
-  if(getSaveAccount()){return onlineMoney('food',{itemId});}
   const item = availableFoodItems.value.find((candidate) => {
     return candidate.id === itemId;
   });
@@ -5885,7 +5875,6 @@ function handleFoodPurchase(itemId) {
 }
 
 function handleInventoryConsumption(itemId) {
-  if(getSaveAccount())return onlineMoney('consume',{itemId},()=>{const item=FOOD_ITEMS.find(i=>i.id===itemId);if(item)consumeFood({status:playerStatus,item,absoluteGameMinute:getAbsoluteGameMinute(gameClock),config:PLAYER_STATUS_CONFIG});});
   const item = FOOD_ITEMS.find((candidate) => {
     return candidate.id === itemId;
   });
@@ -5935,7 +5924,6 @@ function handlePocketFoodCycle() {
 }
 
 function handleFinePayment() {
-  if(getSaveAccount())return onlineMoney('fines',{},()=>clearOutstandingFines(fineState));
   const amount = fineState.outstandingAmount;
 
   if (amount <= 0 || economyState.money < amount) {
@@ -5954,7 +5942,6 @@ function handleFinePayment() {
 }
 
 function handleRentPayment() {
-  if(getSaveAccount())return onlineMoney('rent',{},()=>queuePhoneCall(phoneCallState,'landlord-rent-paid',{priority:true}));
   const amount = lifeObligationView.value.rent.amountDue;
 
   if (
@@ -5986,7 +5973,6 @@ function handleRentPayment() {
 }
 
 function handleSchoolFeesPayment(requestedAmount) {
-  if(getSaveAccount())return onlineMoney('school-fees',{amount:Math.round(Number(requestedAmount))});
   const remaining =
     lifeObligationView.value.schoolFees.remainingAmount;
   const amount = Math.min(
@@ -6022,7 +6008,6 @@ function handleSchoolFeesPayment(requestedAmount) {
 }
 
 function handleFamilyRequestPayment(requestedAmount) {
-  if(getSaveAccount())return onlineMoney('family-request',{amount:Math.round(Number(requestedAmount))});
   const familyView = lifeObligationView.value.familyRequests;
   const activeRequest = familyView.entries.find((entry) => entry.id === familyView.activeId);
   if (!activeRequest) return;
@@ -6120,6 +6105,7 @@ async function handleSleep(hours) {
   resetWorldTrafficAfterSleep();
 
   if (gameClock.day !== previousDay) {
+    void syncOnlineEconomyDayClose(previousDay);
     offerBankLoan({
       economyState,
       currentDay: gameClock.day,
@@ -6349,7 +6335,6 @@ function handleCarOwnerCall() {
 }
 
 function handleVehiclePurchase(vehicleId) {
-  if(getSaveAccount()){return onlineMoney('vehicle',{vehicleId},()=>closeServiceModal());}
   const vehicle = PURCHASABLE_CARS.find((candidate) => {
     return candidate.id === vehicleId;
   });
@@ -6377,7 +6362,6 @@ async function handlePropertyPurchase({propertyId,paymentMethod}) {
 }
 
 function handleBusinessOfficePurchase() {
-  if(getSaveAccount()){return onlineMoney('business-office',{},()=>playGameSound('confirm'));}
   const result = purchaseBusinessOffice({
     state: businessState,
     money: economyState.money,
@@ -6398,7 +6382,6 @@ function handleBusinessOfficePurchase() {
 }
 
 function handleBusinessAssetPurchase(assetId) {
-  if(getSaveAccount()){return onlineMoney('business-asset',{assetId});}
   const result = purchaseBusinessAsset({
     state: businessState,
     assetId,
@@ -6458,7 +6441,6 @@ function handleTrackedObjectiveSelection(objectiveId) {
 }
 
 function handleObjectiveRewardClaim(objectiveId) {
-  if(getSaveAccount())return onlineMoney('claim-objective',{objectiveId});
   const reward = claimObjectiveReward(
     objectiveState,
     objectiveId,
@@ -6499,7 +6481,6 @@ function tryBeginDrivingTestAtSchool() {
   const zone = drivingSchoolZone.value;
   if (!zone || Math.hypot(player.x - (zone.x + zone.width / 2), player.y - (zone.y + zone.height / 2)) > GRID_SIZE * 0.62) return false;
   if (Math.abs(player.speed) > 1 || economyState.money < DRIVER_LICENCE_TEST_FEE) return false;
-  if(getSaveAccount()){if(!onlineMoneyBusy)void onlineMoney('driving-test',{},()=>{const route=DRIVING_TEST_ROUTES[(gameClock.day+driverLicenceState.offenceCount)%DRIVING_TEST_ROUTES.length];if(beginDriverLicenceTest(driverLicenceState,route)){manualMapDestination.value=null;playGameSound('confirm');}});return false;}
   chargeExpense({ economyState, amount: DRIVER_LICENCE_TEST_FEE, type: "driving-test", label: "DRIVING TEST", config: DANFO_ECONOMY_CONFIG });
   const route = DRIVING_TEST_ROUTES[(gameClock.day + driverLicenceState.offenceCount) % DRIVING_TEST_ROUTES.length];
   if (beginDriverLicenceTest(driverLicenceState, route)) {
@@ -6565,7 +6546,6 @@ function updateDriverLicenceTestProgress() {
 }
 
 function handleWaitForMotoEaziRequest() {
-  if(getSaveAccount())return onlineMoney('moto-offer');
   if (employmentState.selectedJob === "moto-eazi" && !isDrivingDanfo.value && !isDrivingBrt.value && economyState.ownedVehicleIds.length > 0) {
     waitForMotoEaziRequest(
       motoEaziState,
@@ -6576,7 +6556,6 @@ function handleWaitForMotoEaziRequest() {
 }
 
 function handleAcceptMotoEaziRequest(requestId) {
-  if(getSaveAccount())return onlineMoney('moto-accept',{requestIdForRide:requestId},()=>{manualMapDestination.value=null;});
   if (employmentState.selectedJob === "moto-eazi" && !isDrivingDanfo.value && !isDrivingBrt.value) {
     manualMapDestination.value = null;
     acceptMotoEaziRequest(motoEaziState, requestId);
@@ -6584,22 +6563,18 @@ function handleAcceptMotoEaziRequest(requestId) {
 }
 
 function handleRejectMotoEaziRequest(requestId) {
-  if(getSaveAccount())return onlineMoney('moto-reject',{requestIdForRide:requestId});
   rejectMotoEaziRequest(motoEaziState, requestId);
 }
 
 function handleSavingsDeposit(amount) {
-  if(getSaveAccount()){return onlineMoney('deposit',{amount:Number(amount)});}
   depositIntoSavings(bankSavingsState, economyState, amount);
 }
 
 function handleSavingsWithdrawal(amount) {
-  if(getSaveAccount()){return onlineMoney('withdraw',{amount:Number(amount)});}
   withdrawFromSavings(bankSavingsState, economyState, amount);
 }
 
 function handleBuyStock(companyId) {
-  if(getSaveAccount()){return onlineMoney('buy-stock',{companyId});}
   const price = buyStock(stockMarketState, companyId, economyState.money);
   if (!price) return;
   chargeExpense({
@@ -6613,7 +6588,6 @@ function handleBuyStock(companyId) {
 }
 
 function handleSellStock(companyId) {
-  if(getSaveAccount()){return onlineMoney('sell-stock',{companyId});}
   const basis=(stockMarketState.investedPrincipal[companyId]||0)/Math.max(1,stockMarketState.holdings[companyId]||0);
   const proceeds = sellStock(stockMarketState, companyId);
   if (!proceeds) return;
@@ -6629,7 +6603,6 @@ function handleSellStock(companyId) {
 }
 
 function handleTakeLoan(amount) {
-  if(getSaveAccount()){return onlineMoney('bank-loan',{amount:Number(amount)});}
   const result = borrowBankLoan({
     economyState,
     amount,
@@ -6646,7 +6619,6 @@ function handleTakeLoan(amount) {
 }
 
 function handlePhoneBankLoan() {
-  if(getSaveAccount()){return onlineMoney('quick-loan');}
   const result = borrowQuickLoan({
     economyState,
     config: DANFO_ECONOMY_CONFIG,
@@ -6659,7 +6631,6 @@ function handlePhoneBankLoan() {
 }
 
 function handleFuelPurchase(payload) {
-  if(getSaveAccount()){return onlineMoney('fuel',{currentFuel:hudState.fuel,litres:typeof payload==='object'?payload.requestedLitres:payload,useCoupon:!!payload?.useCoupon},r=>{hudState.fuel=r.fuel;closeServiceModal();});}
   const requestedLitres = typeof payload === "object" ? payload.requestedLitres : payload;
   const useCoupon = Boolean(payload?.useCoupon) && lifeObligationState.discountCoupons > 0;
   const fuelBeforePurchase = hudState.fuel;
@@ -6671,21 +6642,21 @@ function handleFuelPurchase(payload) {
     discountRate: useCoupon ? 0.5 : 0,
   });
 
-  if (result.success) {
-    if (useCoupon) {
-      lifeObligationState.discountCoupons -= 1;
-    }
-    hudState.fuel = result.fuel;
-    playGameSound("fuelPump", { loop: false });
-    if (fuelBeforePurchase <= 25) {
-      handleObjectiveEvent("low-fuel-refuelled");
-    }
-    closeServiceModal();
+  if (!result.success) return result;
+
+  if (useCoupon) lifeObligationState.discountCoupons -= 1;
+  hudState.fuel = result.fuel;
+  playGameSound("fuelPump", { loop: false });
+  closeServiceModal();
+
+
+  if (fuelBeforePurchase <= 25) {
+    handleObjectiveEvent("low-fuel-refuelled");
   }
+  return result;
 }
 
 function handleLoanRepayment({ amount, receiver, loanType }) {
-  if(getSaveAccount()){return onlineMoney('repay-loan',{amount:Number(amount),loanType});}
   const result = repayBankLoan({
     economyState,
     amount,
@@ -6862,7 +6833,6 @@ function handleKeyDown(event) {
     event.preventDefault();
     if (!serviceSpeedAllowed.value) return;
 
-    if(getSaveAccount()){void onlineMoney('repair',{damage:hudState.damage,useCoupon:key==='v'},r=>{hudState.damage=r.damage;saveActiveVehicleCondition();playGameSound('mechanicRepair',{loop:false});});return;}
     const useCoupon = key === "v" && lifeObligationState.discountCoupons > 0;
     const result = purchaseRepairs({
       economyState,
@@ -6930,15 +6900,6 @@ function clearAiTraffic(){
 }
 function toggleAiTraffic(){careers.local.aiTrafficEnabled=!careers.local.aiTrafficEnabled;clearAiTraffic();saveGame();}
 
-let onlineMoneyBusy=false;
-let onlineMotoNext=0,onlineMotoBusy=false;
-async function pollOnlineMoto(){
- if(!motoEaziState.activeRequest||onlineMotoBusy||Date.now()<onlineMotoNext)return;
- onlineMotoBusy=true;onlineMotoNext=Date.now()+3000;
- try{const r=await gameRequest('economy',{op:'moto-tick'});applyOnlineWallet();if(r.event?.type==='request-complete'){playGameSound('confirm');showPlayerWarning('bank','MOTO EAZI COMPLETE','Fare paid: ₦'+r.event.fare.toLocaleString());saveGame();}}
- catch(e){connection.error=e.message;onlineMotoNext=Date.now()+10000;}finally{onlineMotoBusy=false;}
-}
-
 function applyOnlineWallet(){
  if(!getSaveAccount()||!connection.wallet)return;
  const state=connection.wallet.state;
@@ -6946,22 +6907,65 @@ function applyOnlineWallet(){
  if(connection.wallet.moto)patchServerState(motoEaziState,connection.wallet.moto);
  gameClock.day=connection.wallet.day;gameClock.minuteOfDay=connection.wallet.minute%1440;
 }
-async function onlineMoney(op,payload={},after){
- if(onlineMoneyBusy)return false;onlineMoneyBusy=true;
- try{const result=await gameRequest('economy',{op,...payload});applyOnlineWallet();after?.(result);saveGame();return result;}
- catch(e){applyOnlineWallet();showPlayerWarning('bank','TRANSACTION',e.message);return false;}
- finally{onlineMoneyBusy=false;}
+// Online economy is locally authoritative during the in-game day. Server wallet
+// snapshots are only applied during bootstrap; incidental multiplayer/domain
+// responses must not overwrite the player's unsynced daytime balance.
+
+let onlineDayCloseBusy=false;
+let queuedOnlineDayClose=null;
+function captureOnlineFinancialState(){
+ return JSON.parse(JSON.stringify({
+  economyState:toRaw(economyState),
+  bankSavingsState:toRaw(bankSavingsState),
+  stockMarketState:toRaw(stockMarketState),
+  customizationState:toRaw(customizationState),
+  playerInventory:toRaw(playerInventory),
+  propertyState:toRaw(propertyState),
+  businessState:toRaw(businessState),
+  lifeObligationState:toRaw(lifeObligationState),
+  objectiveState:toRaw(objectiveState),
+  dailyQuestState:toRaw(dailyQuestState),
+ }));
 }
-watch(()=>connection.wallet,applyOnlineWallet,{flush:'post'});
+async function syncOnlineEconomyDayClose(closedDay){
+ if(!getSaveAccount())return true;
+ // Make one local checkpoint first, then send that exact snapshot together with
+ // the day's financial state. This replaces the former economy call + cloud
+ // save call with one server request at the in-game day boundary.
+ if(!saveGame())return false;
+ let snapshot=null;
+ try{snapshot=JSON.parse(window.localStorage.getItem(getSaveStorageKey()));}catch{/* handled below */}
+ if(!snapshot){
+  showPlayerWarning('bank','DAY END SYNC','Could not prepare the day-end checkpoint. Your local save is retained.');
+  return false;
+ }
+ const packet={closedDay,financialState:captureOnlineFinancialState(),closingBalance:Math.round(economyState.money),snapshot,revision:connection.revision};
+ if(onlineDayCloseBusy){queuedOnlineDayClose=packet;return false;}
+ onlineDayCloseBusy=true;
+ try{
+  const result=await gameRequest('economy',{op:'day-close',...packet});
+  if(Number.isInteger(result.revision))connection.revision=result.revision;
+  if(result.updatedAt)connection.lastSaved=result.updatedAt;
+  connection.save='Saved at day end';
+  connection.error='';
+  return true;
+ }catch(e){
+  if(e?.status===409)connection.save='Day-end save conflict · reopen Online';
+  queuedOnlineDayClose=packet;
+  showPlayerWarning('bank','DAY END SYNC','Could not sync the day yet. Your local save is retained.');
+  return false;
+ }finally{
+  onlineDayCloseBusy=false;
+  if(queuedOnlineDayClose&&queuedOnlineDayClose.closedDay!==closedDay){
+   const next=queuedOnlineDayClose;queuedOnlineDayClose=null;void syncOnlineEconomyDayClose(next.closedDay);
+  }
+ }
+}
 
 const passengerPopulation=usePassengerPopulation({player,route:routeState,passengers:passengerState,
- pay:command=>gameRequest('economy',command),
- onPaid(result){
-  applyOnlineWallet();
-  if(result.agberoPayment)agberoPayment.value=result.agberoPayment;
-  saveGame();
- },
- onPaymentError:message=>showPlayerWarning('bank','ROUTE PAYMENT',message)
+ pay:async()=>({success:true}),
+ onPaid(){ saveGame(); },
+ onPaymentError:(message)=>showPlayerWarning('bank','ROUTE PAYMENT',message)
 });
 const heist=useHeist({
  player,crime:crimeState,ready:()=>!!propertyState.starterHomeId,minute:()=>getAbsoluteGameMinute(gameClock),money:()=>economyState.money,home:()=>activeHomeParkingZone.value,
@@ -7051,7 +7055,6 @@ onMounted(() => {
     events: () => club.events.value.map(event => ({ ...event })), paused: () => props.paused,
   });
   if(!COAST_CITY_ENABLED)mutiuEncounter.mode=null;
-  applyOnlineWallet();
   heist.start();
   housing.start();
   club.start();

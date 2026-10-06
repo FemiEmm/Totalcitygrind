@@ -24,10 +24,10 @@ const http = createServer((req, res) => {
     for (const socket of io.of('/').sockets.values()) {
       if (socket.data.identity?.id === playerId) socket.disconnect(true);
     }
-  }, (playerId, targetId) => {
+  }, (playerId, targetId, stopTime) => {
     const players=world.snapshot().players;
     const fresh=(id: string | undefined)=>players.find(p=>p.id===id && Date.now()-p.updatedAt<3000) || null;
-    return {serverPose:fresh(playerId),serverTarget:fresh(targetId),serverTruckBayBlocked:players.some(p=>p.id!==playerId && Math.abs(p.x-59*120)<150 && Math.abs(p.y+6*120)<270)};
+    return {serverPose:(stopTime === undefined ? null : world.stopEvidence(playerId, stopTime)) || fresh(playerId),serverTarget:fresh(targetId),serverTruckBayBlocked:players.some(p=>p.id!==playerId && Math.abs(p.x-59*120)<150 && Math.abs(p.y+6*120)<270)};
   }); return; }
   if (req.method !== 'GET') { res.writeHead(405, {Allow:'GET'}); res.end(JSON.stringify({error:'Method not allowed'})); return; }
   const route = (req.url ?? '').split('?')[0];

@@ -2,7 +2,7 @@ import {payWeeklyRent,paySchoolFees,payFamilyRequest} from '../game-rules/life/s
 import {LIFE_OBLIGATION_CONFIG as lifeConfig} from '../game-rules/life/data/lifeObligations.js';
 import {claimObjectiveReward} from '../game-rules/progression/systems/objectiveSystem.js';
 import {OBJECTIVE_DEFINITIONS} from '../game-rules/progression/data/objectives.js';
-import {account,cash,audit,requireCash,dayOf,minuteOf,progress} from './authority.js';
+import {account,cash,audit,requireCash,dayOf,minuteOf,progress,FINANCIAL_FIELDS} from './authority.js';
 import * as economy from '../game-rules/economy/systems/danfoEconomy.js';
 import * as savings from '../game-rules/economy/systems/bankSavings.js';
 import * as stocks from '../game-rules/economy/systems/stockMarket.js';
@@ -14,7 +14,7 @@ import {DANFO_ECONOMY_CONFIG as config} from '../game-rules/economy/data/danfoEc
 import {createMotoEaziState,waitForMotoEaziRequest,acceptMotoEaziRequest,updateMotoEaziJob,updateMotoEaziOffers,rejectMotoEaziRequest} from '../game-rules/motoEazi/systems/motoEaziJobs.js';
 import {MOTO_EAZI_REQUESTS} from '../game-rules/motoEazi/data/motoEaziRequests.js';
 import {readFileSync} from 'node:fs';
-import {settleTransportStop} from './transport.js';
+import {settleTransportRoute,settleTransportStop} from './transport.js';
 const zones=JSON.parse(readFileSync(new URL('./locations.json',import.meta.url),'utf8'));
 const amount=x=>{if(!Number.isSafeInteger(x)||x<=0||x>1e12)throw Error('Enter a positive whole-naira amount.');return x;};
 function at(p,kind){return zones.find(z=>z.kind===kind&&p&&Math.abs(p.speed)<2&&p.x>=z.x-30&&p.x<=z.x+z.width+30&&p.y>=z.y-30&&p.y<=z.y+z.height+30);}
@@ -29,8 +29,33 @@ export function economyAction(db,input){
  const before=e.money,beforeTransaction=e.nextTransactionNumber,beforeExpenses=e.totalExpenses;let result={success:true},taxable=false,label=op,marketContext={};const events=[];
  const check=r=>{if(!r?.success)throw Error('Action unavailable or insufficient funds.');return r;};
  if(op==='status')return result;
- if(op==='transport-stop')return settleTransportStop(w,input);
- if(op==='ui-progress'){
+ if(op==='day-close'){
+  const closedDay=Math.max(1,Math.floor(Number(input.closedDay)||0));
+  const financial=input.financialState;
+  if(!financial||typeof financial!=='object')throw Error('Missing day-end financial state.');
+  if(!Number.isFinite(financial.economyState?.money)||Math.abs(financial.economyState.money)>1e12)throw Error('Invalid closing balance.');
+  for(const key of FINANCIAL_FIELDS){
+   if(financial[key]===undefined)throw Error('Incomplete day-end financial state.');
+   s[key]=structuredClone(financial[key]);
+  }
+  s.economyState.money=Math.round(s.economyState.money);
+  if(Math.round(Number(input.closingBalance))!==s.economyState.money)throw Error('Closing balance mismatch.');
+  // One trusted daily checkpoint replaces all ordinary daytime economy calls.
+  // Advance the server clock to the start of the next game day if needed.
+  w.originMinute=Math.max(w.originMinute,closedDay*1440);
+  result={success:true,closedDay,closingBalance:s.economyState.money};
+  Object.assign(db.profiles[input.playerId],{
+   money:s.economyState.money,
+   owned_vehicle_ids:['starter-danfo',...new Set(s.economyState.ownedVehicleIds||[])],
+   inventory:structuredClone(s.playerInventory||{}),
+   customization:structuredClone(s.customizationState||{}),
+   updated_at:new Date().toISOString(),
+  });
+  label='DAY END ECONOMY SYNC';
+ }
+ else if(op==='transport-stop')return settleTransportStop(w,input);
+ else if(op==='transport-route')return settleTransportRoute(w,input);
+ else if(op==='ui-progress'){
   if(!['welcome-read','find-job-opened'].includes(input.event))throw Error('This event requires server evidence.');
   progress(w,input.event);
  }else if(op==='claim-objective'){

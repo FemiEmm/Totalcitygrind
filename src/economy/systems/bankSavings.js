@@ -1,4 +1,3 @@
-import {getSaveAccount} from '../../game/saveSlots.js';
 import { notifyTransaction, createMarketReceiptId } from './transactionObservers.js';
 ﻿const RATE_OFFERS = Object.freeze([
   Object.freeze({ rate: 0.02, weight: 35 }),
@@ -69,7 +68,6 @@ export function restoreBankSavingsState(state, savedState, currentDay = 1) {
 }
 
 export function processBankSavingsDay(state, currentDay) {
-  if(getSaveAccount())return [];
   const targetDay = Math.max(1, Math.floor(Number(currentDay) || 1));
   const events = [];
   while (state.lastProcessedDay < targetDay) {

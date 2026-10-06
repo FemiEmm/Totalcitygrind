@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { MAP_ID, PROTOCOL_VERSION, WORLD_ID, type JoinRequest, type MoveRequest, type PlayerState, type WorldSnapshot } from './protocol.js';
-interface Session { player: PlayerState; clock: number; travelBudget: number; }
+interface Session { player: PlayerState; clock: number; travelBudget: number; stops: PlayerState[]; }
 export class World {
   private sessions = new Map<string, Session>();
   private tick = 0;
@@ -12,7 +12,7 @@ export class World {
   join(socketId: string, request: JoinRequest, accountId?: string): PlayerState | null {
     if (this.sessions.has(socketId) || this.size >= this.capacity || (accountId !== undefined && this.hasPlayer(accountId))) return null;
     const player: PlayerState = { ...request.pose, id: accountId ?? randomUUID(), name: request.name, vehicleId: request.vehicleId, sequence: -1, updatedAt: Date.now() };
-    this.sessions.set(socketId, { player, clock: performance.now(), travelBudget: 130 });
+    this.sessions.set(socketId, { player, clock: performance.now(), travelBudget: 130, stops: [] });
     return { ...player };
   }
   move(socketId: string, request: MoveRequest): 'NOT_JOINED' | 'STALE_SEQUENCE' | 'MOVEMENT_REJECTED' | null {
@@ -27,7 +27,19 @@ export class World {
     if (distance > session.travelBudget) return 'MOVEMENT_REJECTED';
     session.travelBudget -= distance;
     Object.assign(session.player, request, { updatedAt: Date.now() });
+    if (Math.abs(session.player.speed) < 2) {
+      const previous = session.stops.at(-1);
+      if (!previous || session.player.updatedAt - previous.updatedAt >= 250) session.stops.push({...session.player});
+    }
+    session.stops = session.stops.filter(p => Date.now() - p.updatedAt < 120000);
     return null;
+  }
+  stopEvidence(playerId: string, at: number): PlayerState | null {
+    if (!Number.isFinite(at) || Date.now() - at > 120000 || at > Date.now() + 3000) return null;
+    const session = [...this.sessions.values()].find(s => s.player.id === playerId);
+    const samples = session?.stops.filter(p => Math.abs(p.updatedAt - at) <= 1500) || [];
+    samples.sort((a,b) => Math.abs(a.updatedAt-at) - Math.abs(b.updatedAt-at));
+    return samples[0] ? {...samples[0]} : null;
   }
   leave(socketId: string): string | null {
     const id = this.sessions.get(socketId)?.player.id ?? null;

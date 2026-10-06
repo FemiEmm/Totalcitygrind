@@ -21,7 +21,7 @@ Open **Online city** on the title screen, create an account or sign in, then cho
 | Coast City | Saves connected; multiplayer presence pending |
 | NPC traffic, shared stock market | Still separate local simulations; authoritative shared simulation pending |
 
-Game saves queue cloud uploads and autosave every 30 seconds. On upload failure the account's local save remains, and the panel says **Local save only — sync failed**. A later save retries. A revision conflict stops uploads until the account is reopened; reopening deliberately loads the server version. Closing a browser cannot guarantee delivery of the last upload: use Save and wait for **Saved on Backender** before closing. Local account saves use separate keys and do not overwrite offline slots.
+Online gameplay autosaves locally every 30 seconds for crash recovery, but those autosaves do not contact the server. The full account snapshot and closing financial state are bundled into one server checkpoint at the end of each in-game day. Live multiplayer presence and movement continue independently through the game server. If the day-end checkpoint fails, the local account save is retained for retry. A revision conflict requires reopening Online so the account can resume from the server version. Local account saves use separate keys and do not overwrite offline slots.
 
 First-home claim is idempotent: if the game closes after payment but before its initial save, reopening uses the existing tenancy without another payment. Local save deletion never releases a shared tenancy. Moving homes, tenancy cancellation, eviction, and server-timed weekly rent are not implemented yet.
 

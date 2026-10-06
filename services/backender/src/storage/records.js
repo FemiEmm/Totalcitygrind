@@ -35,6 +35,14 @@ export async function loadRecords(client){
  for(const wallet of Object.values(state.wallets||{})){wallet.state={};wallet.requests={};wallet.ledger=[];}
  for(const payload of rows.get('wallet_components').values()){const wallet=state.wallets[payload.playerId];if(!wallet)throw Error('Orphan wallet component');wallet.state[payload.key]=payload.value;}
  for(const payload of rows.get('processed_requests').values()){const wallet=state.wallets[payload.playerId];if(!wallet)throw Error('Orphan transaction receipt');wallet.requests[payload.key]=payload.receipt;}
+ // Backfill the phone feed once from immutable audit history, without replaying money changes.
+ const missing=Object.entries(state.wallets||{}).filter(([,w])=>!Array.isArray(w.recentTransactions)).map(([id])=>id);
+ if(missing.length){
+  for(const id of missing)state.wallets[id].recentTransactions=[];
+  const history=await client.query('select owners.id, entries.payload from unnest($1::uuid[]) as owners(id) cross join lateral (select payload from tcg_private.wallet_ledger where player_id=owners.id order by sequence desc limit 100) entries', [missing]);
+  for(const row of history.rows){const entry=row.payload.entry;if(!entry.amount)continue;state.wallets[row.id].recentTransactions.push({id:'server-ledger-'+entry.id,type:'server-ledger',label:entry.label,amount:Math.abs(entry.amount),direction:entry.amount<0?'expense':'income',createdAt:entry.at});}
+  for(const id of missing)state.wallets[id].recentTransactions.sort((a,b)=>b.createdAt-a.createdAt||Number(b.id.split('-').at(-1))-Number(a.id.split('-').at(-1)));
+ }
  return {state,before};
 }
 export async function persistRecords(client,state,before){

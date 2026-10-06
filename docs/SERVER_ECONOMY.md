@@ -49,3 +49,7 @@ This change prevents forged balance/save writes from funding online purchases. I
 - Collision-free, energy-safe, fine-safe and client-condition-only objective events are not accepted as proof for online cash rewards. Their server verification remains outstanding; local edits cannot unlock their payouts. Offline objectives keep their existing behavior.
 - Stocks are protected per-account markets, not yet one global stock exchange. NPC traffic still runs locally.
 - Disk persistence and account-wide settlement have not been load-tested. No claim of production readiness or full anti-cheat is made.
+
+## Route payment recovery (2026-10-06)
+
+Boarding remains local. Route payments use stable request IDs and timestamps and retry transient failures in the background. The game server retains up to two minutes of observed stationary positions, sampled at most four times per second per player, to validate delayed stop claims. Client-supplied proof is overwritten. Unconfirmed stops do not block later stops; fare calculation only includes previously confirmed boarding stops. BRT salary still requires every stop to be confirmed. Old receipts are not replayed as Agbero popups. Wallet responses include the latest 100 audited transactions for the phone, including grants and first rent. Deploy frontend, Backender and game server together. No runtime verification performed.

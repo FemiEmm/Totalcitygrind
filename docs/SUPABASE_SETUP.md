@@ -20,7 +20,7 @@ The new Backender code requires schema version 2. Apply the migration before sta
 
 All tables are in tcg_private, with RLS enabled and no permissions for public, anon or authenticated. Do not expose this schema through the Data API.
 
-- accounts: one account per row, unique case-insensitive username and optional email, private password hashes and signup agreement.
+- accounts: one account per row, unique case-insensitive username and required email for new signups, private password hashes and signup agreement.
 - profiles: one public/game profile per account; financial projection is written by game actions.
 - auth_sessions: hashed tokens, account reference and unique refresh hash.
 - wallets and wallet_components: wallet control data and individual financial components, including cash, savings, stocks, inventory, cosmetics and progression. Amount constraints reject invalid cash/savings values.

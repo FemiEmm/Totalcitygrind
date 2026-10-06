@@ -68,7 +68,7 @@ const PHONE_CONTACTS = Object.freeze([
   }),
   Object.freeze({
     id: "car-owner",
-    name: "Car Owner",
+    name: "Danfo Owner",
     role: "Danfo owner and route dispatcher",
     iconClass: "fa-solid fa-key",
     initials: "CO",
@@ -549,6 +549,31 @@ let saveAcknowledgedTimer = null;
 // Only the physical open/closed phone state is restored from storage.
 const activeMessageContactId = ref(null);
 const activeAppId = ref(null);
+const debuggerUnlocked = ref(false);
+const DEBUGGER_PASSWORD = "ADMINDEBUG";
+const DEBUGGER_TAP_TARGET = 5;
+let debuggerTapCount = 0;
+let debuggerTapResetTimer = null;
+
+function handleDebugUnlockTap() {
+  if (debuggerUnlocked.value) return;
+  debuggerTapCount += 1;
+  window.clearTimeout(debuggerTapResetTimer);
+  debuggerTapResetTimer = window.setTimeout(() => {
+    debuggerTapCount = 0;
+  }, 4000);
+  if (debuggerTapCount < DEBUGGER_TAP_TARGET) return;
+  debuggerTapCount = 0;
+  window.clearTimeout(debuggerTapResetTimer);
+  const password = window.prompt("Admin debug password");
+  if (password === DEBUGGER_PASSWORD) {
+    debuggerUnlocked.value = true;
+    activeAppId.value = null;
+    return;
+  }
+  if (password !== null) window.alert("Incorrect debug password.");
+}
+
 const mutiuReply = ref(
   "You want to race? Call me when the city is dark.",
 );
@@ -564,7 +589,7 @@ const displayedCall = computed(() => {
 });
 
 const launcherApps = computed(() => {
-  return PHONE_APPS.filter((app) => !app.hidden);
+  return PHONE_APPS.filter((app) => !app.hidden && (app.id !== "debugger" || debuggerUnlocked.value));
 });
 
 const orderedPhoneContacts = computed(() => {
@@ -968,6 +993,7 @@ onBeforeUnmount(() => {
   stopVoiceNote();
   window.clearTimeout(notificationShakeTimer);
   window.clearTimeout(saveAcknowledgedTimer);
+  window.clearTimeout(debuggerTapResetTimer);
 });
 
 function requestGameSave() {
@@ -1381,6 +1407,7 @@ function repayLoan() {
       :class="{ 'phone-skin': Boolean(equippedPhone) }"
       :data-phone-model="equippedPhone?.id"
       :style="equippedPhoneStyle"
+      @click.self="handleDebugUnlockTap"
     >
       <button
         class="game-phone__side-button"
@@ -1390,7 +1417,7 @@ function repayLoan() {
         @click="togglePhone"
       />
 
-      <div class="game-phone__speaker" aria-hidden="true" />
+      <div class="game-phone__speaker" aria-hidden="true" @click="handleDebugUnlockTap" />
 
       <div class="game-phone__screen">
         <header class="game-phone__status-bar">
@@ -2015,7 +2042,7 @@ function repayLoan() {
             <template v-else-if="activeMessageContactId === 'car-owner'">
               <header class="game-phone__messages-heading">
                 <span class="game-phone__eyebrow">
-                  {{ currentJob === "brt" ? "BRT OPERATIONS" : "CAR OWNER" }}
+                  {{ currentJob === "brt" ? "BRT OPERATIONS" : "DANFO OWNER" }}
                 </span>
                 <strong>
                   {{ currentJob === "brt" ? "Route assignment" : "Danfo lease" }}

@@ -17,6 +17,40 @@ const homes = JSON.parse(readFileSync(new URL('../data-catalog/homes.json', impo
 const homeParking=JSON.parse(readFileSync(new URL('../data-catalog/housing-parking.json',import.meta.url),'utf8'));
 const catalogue = new Map(homes.map(home => [home.id, home]));
 const object = value => value && typeof value === 'object' && !Array.isArray(value);
+function persistGameSnapshot(db,playerId,snapshot,expectedRevision){
+  const home = Object.values(db.homes || {}).find(h => h.playerId === playerId);
+  if (!home) throw new ApiError(409, 'Choose your home first');
+  const state = snapshot?.currentMapId === 'coastal-city' ? snapshot.world2State : snapshot;
+  if (!object(snapshot) || snapshot.version !== 1 || !object(state) || state.propertyState?.starterHomeId !== home.homeId ||
+    !object(state.economyState) || !Number.isFinite(state.economyState.money) || Math.abs(state.economyState.money) > 1e12 ||
+    !Array.isArray(state.economyState.ownedVehicleIds) || state.economyState.ownedVehicleIds.length > 100 ||
+    state.economyState.ownedVehicleIds.some(id => typeof id !== 'string' || id.length > 64)) throw new ApiError(400, 'Invalid game snapshot');
+  db.gameStates ||= {};
+  const revision = db.gameStates[playerId]?.revision || 0;
+  if (expectedRevision !== revision) throw new ApiError(409, 'A newer account save exists. Reopen Online and continue from the server.');
+  const updatedAt = new Date().toISOString();
+  const saved = { revision: revision + 1, updatedAt, snapshot };
+  db.gameStates[playerId] = saved;
+  db.profiles[playerId].progression ||= {};
+  db.profiles[playerId].progression.firstGameSavedAt ||= updatedAt;
+  acknowledgeGovernment(db,playerId,state.governmentLocal?.lastReceipt);
+  const heist=db.heists?.accounts[playerId];
+  if(heist)heist.receipts=heist.receipts.filter(r=>r.id>(Number(state.heistLocal?.lastReceipt)||0));
+  const housing=db.housing?.accounts[playerId];
+  if(housing)housing.receipts=housing.receipts.filter(r=>r.id>(Number(state.housingLocal?.lastReceipt)||0));
+  const clubAccount=db.club?.accounts[playerId];if(clubAccount)clubAccount.receipts=clubAccount.receipts.filter(r=>r.id>(Number(state.clubLocal?.lastReceipt)||0));
+  const career=db.careers?.[playerId];
+  const credited=Number(state.careerLocal?.lastReceipt)||0;
+  if(career && credited>0)career.receipts=career.receipts.filter(r=>r.id>credited);
+  if (state.crimeState?.status === 'free') {
+    for (const [id, bay] of Object.entries(db.policeBays || {})) if (bay.playerId === playerId) delete db.policeBays[id];
+  }
+  Object.assign(db.profiles[playerId], { money: Math.round(state.economyState.money), bpcWealth: calculateNetWorth(state, wealthCatalogue),
+    owned_vehicle_ids: [...new Set(['starter-danfo', ...state.economyState.ownedVehicleIds])],
+    inventory: state.playerInventory || {}, customization: state.customizationState || {},
+    progression: { ...db.profiles[playerId].progression, day: state.gameClock?.day || 1, selectedJob: state.employmentState?.selectedJob || null }, updated_at: updatedAt });
+  return { revision: saved.revision, updatedAt };
+}
 // All calls arrive through the authenticated game server with its private service key.
 function dispatchGameState(input) {
   const { action, playerId } = input;
@@ -111,43 +145,7 @@ function dispatchGameState(input) {
     db.homes[home.id] = tenancy;
     return tenancy;
   });
-  if (action === 'save') return transaction(db => {
-    const home = Object.values(db.homes || {}).find(h => h.playerId === playerId);
-    if (!home) throw new ApiError(409, 'Choose your home first');
-    const snapshot = input.snapshot;
-    const state = snapshot?.currentMapId === 'coastal-city' ? snapshot.world2State : snapshot;
-    if (!object(snapshot) || snapshot.version !== 1 || !object(state) || state.propertyState?.starterHomeId !== home.homeId ||
-      !object(state.economyState) || !Number.isFinite(state.economyState.money) || Math.abs(state.economyState.money) > 1e12 ||
-      !Array.isArray(state.economyState.ownedVehicleIds) || state.economyState.ownedVehicleIds.length > 100 ||
-      state.economyState.ownedVehicleIds.some(id => typeof id !== 'string' || id.length > 64)) throw new ApiError(400, 'Invalid game snapshot');
-    db.gameStates ||= {};
-    const revision = db.gameStates[playerId]?.revision || 0;
-    if (input.revision !== revision) throw new ApiError(409, 'A newer account save exists. Reopen Online and continue from the server.');
-    const updatedAt = new Date().toISOString();
-    const saved = { revision: revision + 1, updatedAt, snapshot };
-    db.gameStates[playerId] = saved;
-    db.profiles[playerId].progression ||= {};
-    db.profiles[playerId].progression.firstGameSavedAt ||= updatedAt;
-    acknowledgeGovernment(db,playerId,state.governmentLocal?.lastReceipt);
-    const heist=db.heists?.accounts[playerId];
-    if(heist)heist.receipts=heist.receipts.filter(r=>r.id>(Number(state.heistLocal?.lastReceipt)||0));
-    const housing=db.housing?.accounts[playerId];
-    if(housing)housing.receipts=housing.receipts.filter(r=>r.id>(Number(state.housingLocal?.lastReceipt)||0));
-    const clubAccount=db.club?.accounts[playerId];if(clubAccount)clubAccount.receipts=clubAccount.receipts.filter(r=>r.id>(Number(state.clubLocal?.lastReceipt)||0));
-    const career=db.careers?.[playerId];
-    const credited=Number(state.careerLocal?.lastReceipt)||0;
-    if(career && credited>0)career.receipts=career.receipts.filter(r=>r.id>credited);
-
-    if (state.crimeState?.status === 'free') {
-      for (const [id, bay] of Object.entries(db.policeBays || {})) if (bay.playerId === playerId) delete db.policeBays[id];
-    }
-    // Snapshot financial fields were replaced with the authoritative wallet before reaching this handler.
-    Object.assign(db.profiles[playerId], { money: Math.round(state.economyState.money), bpcWealth: calculateNetWorth(state, wealthCatalogue),
-      owned_vehicle_ids: [...new Set(['starter-danfo', ...state.economyState.ownedVehicleIds])],
-      inventory: state.playerInventory || {}, customization: state.customizationState || {},
-      progression: { ...db.profiles[playerId].progression, day: state.gameClock?.day || 1, selectedJob: state.employmentState?.selectedJob || null }, updated_at: updatedAt });
-    return { revision: saved.revision, updatedAt };
-  });
+  if (action === 'save') return transaction(db => persistGameSnapshot(db,playerId,input.snapshot,input.revision));
   throw new ApiError(400, 'Unknown game action');
 }
 
@@ -176,7 +174,12 @@ export function gameState(input){
   const trusted={...input,money:w.state.economyState.money,savings:w.state.bankSavingsState.balance,minute:minuteOf(w),day:dayOf(w),gameWeek:Math.floor((dayOf(w)-1)/7),income:w.income,lastReceipt:w.applied[input.action]||0,ack:w.applied.passengers||0};
   if(input.action==='career')trusted.money=w.state.economyState.money;
   if(input.action==='save')trusted.snapshot=protectSnapshot(db,id,input.snapshot);
+  if(input.action==='economy'&&input.op==='day-close')trusted.snapshot=input.snapshot;
   const result=dispatchGameState(trusted);
+  if(input.action==='economy'&&input.op==='day-close'){
+    const saved=persistGameSnapshot(db,id,protectSnapshot(db,id,trusted.snapshot),input.revision);
+    Object.assign(result,saved);
+  }
   if(trusted.serverPose)observeEconomyLocation(db,id,trusted.serverPose);
   if(input.action==='passengers'&&input.op==='start'){progress(w,'job-selected');progress(w,'route-selected');}
   if(trusted.serverPose&&Math.abs(trusted.serverPose.speed)>0.5)progress(w,'engine-started');
@@ -196,7 +199,9 @@ export function gameState(input){
    w.state.economyState.money=result.startingBalance;audit(w,-result.firstRentPaid,'FIRST HOME RENT',false);
    w.state.playerInventory=structuredClone(db.profiles[id].inventory);w.state.propertyState.starterHomeId=result.homeId;w.version++;
   }
-  settle(db);
+  // Day-end economy sync is already the final client checkpoint for the closed
+  // day. Do not immediately run next-day financial settlement over it.
+  if(!(input.action==='economy'&&input.op==='day-close'))settle(db);
   // Project trusted state back into stored saves and bootstrap results.
   if(db.gameStates?.[id])db.gameStates[id].snapshot=protectSnapshot(db,id,db.gameStates[id].snapshot);
   for(const [profileId,wallet] of Object.entries(db.wallets))if(db.profiles[profileId])db.profiles[profileId].bpcWealth=calculateNetWorth(wallet.state,wealthCatalogue);

@@ -6,7 +6,7 @@ const engineOn = computed(isPlayerVehicleEngineStarted);
 const emit = defineEmits(["input"]);
 const held = ref(new Map());
 const groups = [
-  { id: "steering", controls: [{ key: "a", label: "Steer left", icon: "fa-circle-arrow-left" }, { key: "d", label: "Steer right", icon: "fa-circle-arrow-right" }] },
+  { id: "steering", controls: [{ key: "a", inputKey: "d", label: "Steer left", icon: "fa-circle-arrow-left" }, { key: "d", inputKey: "a", label: "Steer right", icon: "fa-circle-arrow-right" }] },
   { id: "gears", controls: [{ key: "e", label: "Gear up", text: "GEAR +" }, { key: "q", label: "Gear down", text: "GEAR −" }] },
   { id: "utility", controls: [{ key: "i", label: "Start or stop engine", text: "START", icon: "fa-key" }, { key: "h", label: "Horn", text: "HORN" }] },
   { id: "pedals", controls: [{ key: "s", label: "Brake or reverse", text: "BRAKE / R" }, { key: "w", label: "Throttle — accelerate", text: "THROTTLE" }] },
@@ -48,8 +48,8 @@ onBeforeUnmount(() => {
   <nav class="touch-controls" :class="{ 'touch-controls--automatic': props.transmission !== 'manual', 'touch-controls--ignition-only': props.ignitionOnly }" aria-label="Driving controls">
     <div v-for="group in visibleGroups" :key="group.id" class="touch-controls__group" :class="`touch-controls__${group.id}`">
       <button v-for="control in group.controls" :key="control.key" type="button" :aria-label="control.key === 'i' ? (engineOn ? 'Stop engine' : 'Start engine') : control.label"
-        :class="{ held: [...held.values()].includes(control.key), accelerator: control.key === 'w' }"
-        @pointerdown.prevent="press($event, control.key)" @pointerup="release" @pointercancel="release"
+        :class="{ held: [...held.values()].includes(control.inputKey ?? control.key), accelerator: control.key === 'w' }"
+        @pointerdown.prevent="press($event, control.inputKey ?? control.key)" @pointerup="release" @pointercancel="release"
         @lostpointercapture="release" @contextmenu.prevent @click="activateFromKeyboard($event, control.key)">
         <i v-if="control.icon" class="fa-solid" :class="control.icon" aria-hidden="true" />
         <span v-if="control.text">{{ control.key === "i" ? (engineOn ? "STOP" : "START") : control.text }}</span>

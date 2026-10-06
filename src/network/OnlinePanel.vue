@@ -40,7 +40,7 @@ onMounted(checkConnections);
         <label v-if="signup">Username<input v-model="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false" /><small>3–24 letters, numbers or underscores. This is your in-game name.</small></label>
         <label v-else>Username or email<input v-model="identifier" required maxlength="254" autocomplete="username" autocapitalize="none" spellcheck="false" /></label>
         <label>Password<span class="password-field"><input v-model="password" :type="showPassword ? 'text' : 'password'" minlength="8" maxlength="128" required :autocomplete="signup ? 'new-password' : 'current-password'" /><button type="button" :aria-label="showPassword ? 'Hide password' : 'Show password'" :aria-pressed="showPassword" @click="showPassword = !showPassword"><i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'" aria-hidden="true" /></button></span><small v-if="signup">At least 8 characters.</small></label>
-        <label v-if="signup">Email (optional)<input v-model="email" type="email" maxlength="254" autocomplete="email" /><small>Password recovery is not available in this alpha yet. Without an email, email-based recovery will not be possible.</small></label>
+        <label v-if="signup">Email<input v-model="email" type="email" required maxlength="254" autocomplete="email" /><small>A valid email address is required to create an account. Password recovery is not available in this alpha yet.</small></label>
         <div v-if="signup" class="agreement"><label><input v-model="accepted" type="checkbox" required /> I’m 18 or older and agree to the Terms and Privacy Policy.</label><span><button type="button" @click="legal = 'terms'">Terms and Conditions</button> · <button type="button" @click="legal = 'privacy'">Privacy Policy</button></span></div>
         <button :disabled="waiting || (signup && !accepted)">{{ waiting ? 'Connecting…' : signup ? 'Create account' : 'Sign in' }}</button>
         <button type="button" :disabled="waiting" @click="signup = !signup; error = ''; legal = ''">{{ signup ? 'I already have an account' : 'Create an account' }}</button>
@@ -70,11 +70,11 @@ onMounted(checkConnections);
           <p>Use only content you have permission to share. Access may be restricted for abuse. You can delete your online account from the online menu.</p>
         </template>
         <template v-else>
-          <p>We store your name, username, optional email, a salted password hash, sign-in sessions and your agreement confirmation. Your username is public; your name and email are not displayed to other players.</p>
+          <p>We store your name, username, email, a salted password hash, sign-in sessions and your agreement confirmation. Your username is public; your name and email are not displayed to other players.</p>
           <p>The game stores online progress, housing, inventory, transactions and rankings to operate your account. Online players can see your in-game name, vehicle and location. The browser also stores sign-in tokens, settings and local saves.</p>
           <p>Visit totals and online-player counts are recorded for the menu. Temporary visit identifiers are retained for up to 24 hours to avoid counting retries. Hosting and network services process connection information to deliver the game.</p>
           <p>Delete online account removes your active account and online progress and releases your home. Offline saves remain on your device. Copies in existing backups may remain until those backups are replaced or removed.</p>
-          <p>Email is optional. Password recovery is not currently available in this alpha.</p>
+          <p>Email is required to create an account. Password recovery is not currently available in this alpha.</p>
         </template>
       </section>
       <p class="error" v-if="error || connection.error" role="alert">{{ error || connection.error }}</p>

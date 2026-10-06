@@ -1,23 +1,15 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from 'vue';
-const props = defineProps({ payment: { type: Object, default: null } });
-const visiblePayment = ref(null);
-const queue = [];
-let timer = null;
-function showNext() {
-  if (!queue.length) { timer = null; return; }
-  visiblePayment.value = queue.shift();
-  timer = window.setTimeout(() => {
-    visiblePayment.value = null;
-    timer = window.setTimeout(showNext, 280);
-  }, 3400);
-}
-watch(() => props.payment, (payment) => {
-  if (!payment) return;
-  queue.push(payment);
-  if (timer === null) showNext();
+const props=defineProps({payment:{type:Object,default:null}});
+const visiblePayment=ref(null),seen=new Set();
+let timer=null;
+watch(()=>props.payment?.id,id=>{
+ if(id==null||seen.has(id))return;
+ seen.add(id);if(seen.size>100)seen.delete(seen.values().next().value);
+ window.clearTimeout(timer);visiblePayment.value=props.payment;
+ timer=window.setTimeout(()=>{visiblePayment.value=null;timer=null;},3400);
 });
-onBeforeUnmount(() => { window.clearTimeout(timer); queue.length = 0; });
+onBeforeUnmount(()=>window.clearTimeout(timer));
 </script>
 
 <template>

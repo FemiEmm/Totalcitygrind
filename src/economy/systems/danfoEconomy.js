@@ -1,4 +1,3 @@
-import {getSaveAccount} from '../../game/saveSlots.js';
 import { notifyTransaction, createMarketReceiptId } from './transactionObservers.js';
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
@@ -139,7 +138,6 @@ export function purchasePlayerVehicle({
 }
 
 export function addMotoEaziFare(economyState, amount) {
-  if(getSaveAccount())return;
   const fare = Math.max(0, Math.round(amount));
   economyState.money += fare;
 
@@ -159,8 +157,8 @@ export function creditIncome({
   type,
   label,
   config,
+  optimistic = false,
 }) {
-  if(getSaveAccount())return;
   const income = Math.max(0, Math.round(amount));
 
   if (income <= 0) {
@@ -187,8 +185,8 @@ export function chargeExpense({
   type,
   label,
   config,
+  optimistic = false,
 }) {
-  if(getSaveAccount())return;
   const cost = Math.max(0, Math.round(amount));
 
   if (cost <= 0) {
@@ -215,7 +213,6 @@ export function addEmergencyBankLoan({
   amount,
   config,
 }) {
-  if(getSaveAccount())return;
   const principal = Math.max(0, Math.ceil(Number(amount) || 0));
 
   if (principal <= 0) {
@@ -420,8 +417,7 @@ export function repayBankLoan({
   };
 }
 
-export function addPassengerFare(economyState, amount) {
-  if(getSaveAccount())return;
+export function addPassengerFare(economyState, amount, { optimistic = false } = {}) {
   const safeAmount = Math.max(0, Math.round(amount));
 
   economyState.money += safeAmount;
@@ -436,7 +432,7 @@ export function addPassengerFare(economyState, amount) {
   return safeAmount;
 }
 
-export function chargeAgberoPickup({ economyState, currentDay, boardedCount, config }) {
+export function chargeAgberoPickup({ economyState, currentDay, boardedCount, config, optimistic = false }) {
   if (!(boardedCount > 0)) return null;
   const day = Math.max(1, Math.floor(Number(currentDay) || 1));
   const firstPickup = economyState.lastAgberoTicketDay !== day;
@@ -445,7 +441,7 @@ export function chargeAgberoPickup({ economyState, currentDay, boardedCount, con
   chargeExpense({
     economyState, amount, type: "agbero-payment",
     label: "Paid agbero " + amount.toLocaleString("en-NG") + " - " + reason,
-    config,
+    config, optimistic,
   });
   economyState.lastAgberoTicketDay = day;
   return { amount, reason };
@@ -460,7 +456,6 @@ export function processDailyGarageFees({
   currentDay,
   config,
 }) {
-  if(getSaveAccount())return;
   if (economyState.gameOver) {
     return null;
   }
@@ -521,7 +516,6 @@ export function processDailyBrtTax({
   currentDay,
   config,
 }) {
-  if(getSaveAccount())return;
   let latestTransaction = null;
 
   while (economyState.lastProcessedDay < currentDay) {
