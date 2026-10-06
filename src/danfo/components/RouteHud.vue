@@ -3,6 +3,7 @@ import { computed } from "vue";
 
 const props = defineProps({
   activityLabel:{type:String,default:null},
+  statusLabel:{type:String,default:''},
   route: {
     type: Object,
     default: null,
@@ -46,7 +47,7 @@ const instruction = computed(() => {
     return "Slow down";
   }
 
-  return props.activityLabel || "Boarding passengers";
+  return props.statusLabel || props.activityLabel || "Boarding passengers";
 });
 </script>
 

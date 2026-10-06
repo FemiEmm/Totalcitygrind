@@ -48,7 +48,13 @@ export function passengerAction(pool,catalogue,id,input) {
   if(s?.tripId!==input.tripId){release(pool,id,minute);s=pool.sessions[id]={tripId:input.tripId,routeId:route.id,index:0,visited:false,charged:false,closed:false,lastStop:route.stopIds[0],seen:minute,sequence:s?.sequence||0,events:s?.events||[]};}
  } else if(op==='cancel'){release(pool,id,minute);}
  else if(op==='step'||op==='leave'){
-  if(!s||s.closed||s.tripId!==input.tripId)throw Error('Passenger journey changed.');
+  if(!s||s.tripId!==input.tripId)throw Error('Passenger journey changed.');
+  if(input.stopIndex!==undefined){
+   if(!Number.isInteger(input.stopIndex)||input.stopIndex<0)throw Error('Invalid passenger stop index.');
+   // Recover an already completed stop without boarding at the following stop.
+   if(s.closed||input.stopIndex!==s.index)return passengerView(pool,id,minute);
+  }
+  if(s.closed)throw Error('Passenger journey changed.');
   const route=catalogue.routes.find(r=>r.id===s.routeId),stop=catalogue.stops.find(st=>st.id===route.stopIds[s.index]);
   const inside=pose&&Math.abs(pose.x-stop.x-60)<=125&&Math.abs(pose.y-stop.y-60)<=125;
   const stopped=inside&&Math.abs(pose.speed)<2;

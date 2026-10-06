@@ -7360,6 +7360,7 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       :following-stop="followingRouteStop"
       :current-stop-index="routeState.currentStopIndex"
       :hold-progress="stopHoldProgress"
+      :status-label="passengerPopulation.activity.value"
       :inside-stop="isInsideActiveStop"
       :speed-allowed="isStopSpeedAllowed"
     />
