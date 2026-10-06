@@ -124,7 +124,6 @@ import HealthTreatmentModal from "../../player/components/HealthTreatmentModal.v
 import SleepModal from "../../player/components/SleepModal.vue";
 import EnergyDepletedModal from "../../player/components/EnergyDepletedModal.vue";
 import DanfoGameOver from "../../economy/components/DanfoGameOver.vue";
-import EconomyFeedback from "../../economy/components/EconomyFeedback.vue";
 import EconomyServicePrompt from "../../economy/components/EconomyServicePrompt.vue";
 import FuelPurchaseModal from "../../economy/components/FuelPurchaseModal.vue";
 import BankServicesModal from "../../economy/components/BankServicesModal.vue";
@@ -575,7 +574,7 @@ let agberoPaymentSequence = 0;
 const stockMarketState = reactive(createStockMarketState());
 const stockMarketView = computed(() => getStockMarketView(stockMarketState));
 const bankMessageFeed = computed(() => {
-  return [...bankSavingsState.messages, ...economyState.transactions].sort(
+  return [...bankSavingsState.messages, ...(getSaveAccount() ? (connection.wallet?.transactions ?? economyState.transactions) : economyState.transactions)].sort(
     (left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0),
   );
 });
@@ -979,6 +978,7 @@ const PLAYER_WARNING_CONFIG = Object.freeze({
   displayMilliseconds: 5200,
 });
 const activePlayerWarning = ref(null);
+const firstRoutePrompt=ref(false);
 const energyDepleted = ref(false);
 let playerWarningTimer = null;
 
@@ -5225,6 +5225,7 @@ watch(
 );
 
 function handleRouteSelection(routeId) {
+  if(!employmentState.selectedJob&&isDrivingDanfo.value)handleJobSelection('danfo');
   const selectedJobVehicleIsActive =
     (employmentState.selectedJob === "danfo" && isDrivingDanfo.value) ||
     (employmentState.selectedJob === "brt" && isDrivingBrt.value);
@@ -5661,6 +5662,7 @@ function beginNewGame({ homeId, playerName, onlineTenancy }) {
   player.isParked = true;
   stopPlayerVehicleEngine();
   centreCameraOnPlayer();
+  firstRoutePrompt.value=true;
   saveGame();
   return true;
 }
@@ -6953,15 +6955,13 @@ async function onlineMoney(op,payload={},after){
 watch(()=>connection.wallet,applyOnlineWallet,{flush:'post'});
 
 const passengerPopulation=usePassengerPopulation({player,route:routeState,passengers:passengerState,
- async onStop(event){
-  if(!getSaveAccount())return;
-  try{
-   const result=await gameRequest('economy',{op:'transport-stop',routeId:event.route.id,tripId:event.tripId,stopIndex:event.stopIndex});
-   applyOnlineWallet();
-   if(result.agberoPayment)agberoPayment.value={...result.agberoPayment,id:++agberoPaymentSequence};
-   saveGame();
-  }catch(e){showPlayerWarning('bank','ROUTE PAYMENT',e.message);}
- }
+ pay:command=>gameRequest('economy',command),
+ onPaid(result){
+  applyOnlineWallet();
+  if(result.agberoPayment)agberoPayment.value=result.agberoPayment;
+  saveGame();
+ },
+ onPaymentError:message=>showPlayerWarning('bank','ROUTE PAYMENT',message)
 });
 const heist=useHeist({
  player,crime:crimeState,ready:()=>!!propertyState.starterHomeId,minute:()=>getAbsoluteGameMinute(gameClock),money:()=>economyState.money,home:()=>activeHomeParkingZone.value,
@@ -7383,6 +7383,9 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
     />
 
 
+    <div v-if="firstRoutePrompt" class="first-route-prompt" role="dialog" aria-modal="true" aria-label="Your first route">
+      <section><h2>Your first route</h2><p>Open your phone, go to Messages, click Danfo Owner, and pick your first route.</p><button type="button" @click="firstRoutePrompt=false">Got it</button></section>
+    </div>
     <AgberoPaymentToast :payment="agberoPayment" />
 
     <aside v-if="passengerPopulation.error.value" style="position:absolute;bottom:100px;left:50%;transform:translateX(-50%);max-width:75%;padding:8px;background:#fff7dc;color:#17213a;z-index:5100;border-radius:10px" role="status">Passengers: {{passengerPopulation.error.value}}</aside>
@@ -7391,16 +7394,6 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       :result="passengerState.lastStopResult"
     />
 
-    <EconomyFeedback
-      v-if="
-        hudPreferences.feedback &&
-        economyState.lastTransaction &&
-        economyState.lastTransaction.type !== 'agbero-payment' &&
-        routeState.status !== 'complete' &&
-        !economyState.gameOver
-      "
-      :transaction="economyState.lastTransaction"
-    />
 
     <EconomyServicePrompt
       v-if="hudPreferences.servicePrompts && nearbyRepairService"
@@ -8156,3 +8149,7 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
 
 
 
+
+<style scoped>
+.first-route-prompt{position:absolute;inset:0;z-index:12000;display:grid;place-items:center;background:#17213a99;padding:24px}.first-route-prompt section{max-width:360px;padding:24px;border-radius:20px;background:#fff7dc;color:#17213a}.first-route-prompt h2{margin:0 0 12px}.first-route-prompt button{padding:12px 24px;border:0;border-radius:12px;background:#ffdf35;font:inherit;font-weight:bold}
+</style>

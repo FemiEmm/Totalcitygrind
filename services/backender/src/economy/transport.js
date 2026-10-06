@@ -14,14 +14,14 @@ export function settleTransportStop(w,input){
  const receipt=w.transportReceipts[input.tripId];
  if(receipt&&receipt.routeId!==route.id)throw Error('Route payment does not match this journey.');
  if(receipt?.stops.includes(index))return {success:true,alreadyPaid:true};
- if(index!==(receipt?.stops.length||0))throw Error('A previous route payment was not confirmed. Start a new route when connected.');
+
  // Limit repeated claims from different journey IDs at the same stop.
  if(w.transportLastStop===stop.id&&Date.now()-(w.transportPaidAt||0)<3000)throw Error('This stop payment was just processed.');
  const config={capacity:route.job==='brt'?48:14,minimumWaitingPerStop:route.job==='brt'?5:2,maximumWaitingPerStop:route.job==='brt'?16:8,baseFare:route.job==='brt'?0:150,farePerStop:route.job==='brt'?0:100,feedbackSeconds:2.4};
  const passengers=createDanfoPassengerState(config);
  startDanfoPassengerRoute({passengerState:passengers,route,config});
  let result;
- for(let i=0;i<=index;i++)result=processDanfoStop({passengerState:passengers,route,stop:catalogue.stops.find(s=>s.id===route.stopIds[i]),stopIndex:i,config});
+ for(let i=0;i<=index;i++)if(i===index||receipt?.stops.includes(i))result=processDanfoStop({passengerState:passengers,route,stop:catalogue.stops.find(s=>s.id===route.stopIds[i]),stopIndex:i,config});
  const day=dayOf(w);w.workDays ||= {};w.workDays[day]=route.job;
  progress(w,'job-selected');progress(w,'route-selected');
  if(result.boardedCount){progress(w,'passenger-boarded',result.boardedCount);progress(w,route.job+'-passenger-boarded',result.boardedCount);}
@@ -30,7 +30,7 @@ export function settleTransportStop(w,input){
  if(result.boardedCount&&route.job==='danfo'){
   const first=w.agberoDay!==day,amount=first?1000:300;
   cash(w,-amount,first?'AGBERO TICKET':'AGBERO LOADING',false);w.agberoDay=day;w.state.economyState.lastAgberoTicketDay=day;
-  agberoPayment={amount,reason:first?'owo ticket':'owo loading'};
+  agberoPayment={id:input.tripId+':'+index,amount,reason:first?'owo ticket':'owo loading'};
  }
  const paid=receipt||{routeId:route.id,stops:[]};paid.stops.push(index);w.transportReceipts[input.tripId]=paid;
  w.transportLastStop=stop.id;w.transportPaidAt=Date.now();

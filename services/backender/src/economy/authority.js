@@ -32,7 +32,14 @@ export const minuteOf=w=>w.originMinute;
 export const dayOf=w=>Math.floor(minuteOf(w)/1440)+1;
 export function audit(w,amount,label,taxable=amount>0){
  if(!Number.isSafeInteger(amount)||Math.abs(amount)>1e12)throw Error('Invalid server transaction.');
+ const seedReceipts=!Array.isArray(w.recentTransactions);
+ w.recentTransactions ||= structuredClone(w.state.economyState.transactions||[]);
+ const direction=amount<0?'expense':'income';
+ const duplicate=w.recentTransactions.findIndex(t=>t.label===label&&t.direction===direction&&t.amount===Math.abs(amount)&&Date.now()-t.createdAt<1000);
+ if(seedReceipts&&duplicate>=0)w.recentTransactions.splice(duplicate,1);
  w.ledgerCount=(w.ledgerCount??w.ledger.length)+1;
+ if(amount)w.recentTransactions.unshift({id:'server-ledger-'+w.ledgerCount,type:'server-ledger',label,amount:Math.abs(amount),direction,createdAt:Date.now()});
+ w.recentTransactions=w.recentTransactions.slice(0,100);
  w.ledger.push({id:w.ledgerCount,at:Date.now(),amount,label,cash:w.state.economyState.money,savings:w.state.bankSavingsState.balance});w.version++;
  if(taxable&&amount>0&&!label.startsWith('DAILY QUEST'))progress(w,'income-earned',amount);
  if(taxable&&amount>0){const week=Math.floor((dayOf(w)-1)/7);w.income[week]=(w.income[week]||0)+amount;}
@@ -87,7 +94,7 @@ export function settle(db){
   Object.assign(db.profiles[id],{money:state.economyState.money,owned_vehicle_ids:['starter-danfo',...state.economyState.ownedVehicleIds],inventory:structuredClone(state.playerInventory),customization:structuredClone(state.customizationState)});
  }
 }
-export function walletView(w){return {version:w.version,state:structuredClone(w.state),moto:structuredClone(w.moto||createMotoEaziState()),minute:minuteOf(w),day:dayOf(w)};}
+export function walletView(w){return {version:w.version,transactions:structuredClone(w.recentTransactions||w.state.economyState.transactions||[]),state:structuredClone(w.state),moto:structuredClone(w.moto||createMotoEaziState()),minute:minuteOf(w),day:dayOf(w)};}
 export function protectSnapshot(db,id,snapshot){
  const w=account(db,id);const clean=structuredClone(snapshot);
  if(clean.currentMapId==='coastal-city')throw Error('Coast City is locked.');
