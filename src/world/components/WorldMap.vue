@@ -1,4 +1,6 @@
 <script setup>
+import { rebaseCityDates } from "../../time/systems/rebaseCityDates.js";
+import { syncSharedClock } from "../../time/systems/sharedClock.js";
 import { toRaw } from "vue";
 import { patchServerState } from "../../network/patchServerState.js";
 import {usePassengerPopulation} from '../../danfo/population/usePassengerPopulation.js';
@@ -547,6 +549,7 @@ const playerInventory = reactive(
 const gameClock = reactive(
   createGameClock(GAME_TIME_CONFIG),
 );
+if(getSaveAccount())syncSharedClock(gameClock,GAME_TIME_CONFIG);
 const mutiuEncounter = reactive(createMutiuEncounterState());
 const bankColdCallVisible = ref(false);
 const phoneCallState = reactive(createPhoneCallSchedulerState());
@@ -1183,7 +1186,12 @@ const employmentState = reactive({
   selectedJob: null,
 });
 
+const godMode = ref(false);
+watch(() => [playerStatus.health, playerStatus.energy, godMode.value], () => {
+  if(godMode.value){playerStatus.health=PLAYER_STATUS_CONFIG.maximumHealth;playerStatus.energy=PLAYER_STATUS_CONFIG.maximumEnergy;}
+}, {flush:"sync"});
 const sleepState = reactive({
+  sleeping: false,
   modalOpen: false,
   overlayVisible: false,
   overlayFading: false,
@@ -3004,6 +3012,12 @@ function drawBuildingBody(
     return;
   }
 
+  context.save();
+  context.fillStyle='rgba(0,0,0,0.24)';
+  context.shadowColor='rgba(0,0,0,0.38)';context.shadowBlur=14;
+  context.shadowOffsetX=8;context.shadowOffsetY=10;
+  context.fillRect(building.x+6,building.y+6,building.width-12,building.height-12);
+  context.restore();
   if (building.pedestrianSetback > 0) {
     context.fillStyle = "#c5c2ba";
     context.fillRect(
@@ -3690,7 +3704,7 @@ function drawVehicleHeadlights(context, vehicle) {
   }
 
   const beamLength = GRID_SIZE * 2;
-  const startY = -vehicle.length / 2 + 3;
+  const startY = -(vehicle.lightLength ?? vehicle.length) / 2 + 3;
   const endY = startY - beamLength;
   const lampOffset = vehicle.width * 0.27;
   const beamHalfWidth = GRID_SIZE * 0.38;
@@ -3761,6 +3775,7 @@ function drawAllVehicleHeadlights(context) {
 
   if (isPlayerVehicleEngineStarted()) {
     drawVehicleHeadlights(context, {
+      lightLength: activeVehicleConfig.value.length * (activeVehicleConfig.value.spriteRenderScale ?? 1),
       bodyOffsetY: activeVehicleConfig.value.id === PLAYER_DANFO.id ? danfoBodyMotion.offsetY : 0,
       x: player.x,
       y: player.y,
@@ -4578,13 +4593,21 @@ function handleSoundSettingsChange(settings) {
 }
 
 function updateGameSimulation(deltaSeconds) {
+  if(sleepState.sleeping){
+    pressedKeys.clear();player.speed=0;
+    const hours=deltaSeconds*GAME_TIME_CONFIG.gameMinutesPerRealSecond/60;
+    restoreEnergyFromSleep(playerStatus,hours*getHomeSleepMultiplier(propertyState),PLAYER_STATUS_CONFIG);
+    playerStatus.health=Math.min(PLAYER_STATUS_CONFIG.maximumHealth,playerStatus.health+hours*12.5);
+  }
   club.update();
   heist.update(deltaSeconds);
   government.update();
   careers.update(economyState.gameOver ? 0 : deltaSeconds * GAME_TIME_CONFIG.gameMinutesPerRealSecond, economyState.gameOver ? 0 : deltaSeconds);
   if (careers.notice.value) { pressedKeys.clear(); player.speed = 0; stopPlayerVehicleEngine(); }
   updatePolice(deltaSeconds);
-  if (crimeState.status === "detained" && economyState.gameOver) updateGameClock(gameClock, deltaSeconds, GAME_TIME_CONFIG);
+  if (crimeState.status === "detained" && economyState.gameOver) {
+    if(getSaveAccount())syncSharedClock(gameClock,GAME_TIME_CONFIG);else updateGameClock(gameClock,deltaSeconds,GAME_TIME_CONFIG);
+  }
   if (worldTransition.active || mutiuEncounter.mode) {
     pressedKeys.clear();
     player.speed = 0;
@@ -4598,8 +4621,8 @@ function updateGameSimulation(deltaSeconds) {
   const elapsedGameMinutes =
     deltaSeconds * GAME_TIME_CONFIG.gameMinutesPerRealSecond;
 
-  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock)+elapsedGameMinutes,{crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
-  if (crimeState.status === "free") updatePlayerEnergy({
+  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock)+elapsedGameMinutes,{sleeping:sleepState.sleeping,crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
+  if (crimeState.status === "free" && !sleepState.sleeping && !godMode.value) updatePlayerEnergy({
     status: playerStatus,
     elapsedGameMinutes,
     absoluteGameMinute:
@@ -4920,11 +4943,8 @@ function updateGameSimulation(deltaSeconds) {
 
     const previousDay = gameClock.day;
 
-    updateGameClock(
-      gameClock,
-      deltaSeconds,
-      GAME_TIME_CONFIG,
-    );
+    if(getSaveAccount())syncSharedClock(gameClock,GAME_TIME_CONFIG);
+    else updateGameClock(gameClock,deltaSeconds,GAME_TIME_CONFIG);
 
     if(COAST_CITY_ENABLED) updateMutiuEncounter({
       state: mutiuEncounter,
@@ -5430,12 +5450,14 @@ function clearSavedState() {
 }
 
 function saveGame() {
+  if(getSaveAccount())syncSharedClock(gameClock,GAME_TIME_CONFIG);
   if (typeof window === "undefined") {
     return false;
   }
 
   saveActiveVehicleCondition();
   const saveData = {
+    clockVersion: getSaveAccount() ? 1 : 0,
     version: 1,
     savedAt: new Date().toISOString(),
     currentMapId: currentMapId.value,
@@ -5513,6 +5535,11 @@ function restoreSavedGame() {
       return false;
     }
 
+    if(getSaveAccount() && saveData.clockVersion!==1 && saveData.gameClock){
+      const old={...saveData.gameClock},city={...old};syncSharedClock(city,GAME_TIME_CONFIG);
+      rebaseCityDates(saveData,city.day-old.day,(city.day-old.day)*1440+city.minuteOfDay-old.minuteOfDay);
+      saveData.gameClock=city;saveData.clockVersion=1;
+    }
     migrateLocationLabels(saveData);
     heist.restore(saveData.heistState,saveData.heistLocal);
     housing.restore(saveData.housingState,saveData.housingLocal);
@@ -5545,6 +5572,7 @@ function restoreSavedGame() {
     Object.assign(playerInventory, saveData.playerInventory ?? {});
     equippedFoodId.value = saveData.equippedFoodId ?? null;
     Object.assign(gameClock, saveData.gameClock ?? {});
+    if(getSaveAccount())syncSharedClock(gameClock,GAME_TIME_CONFIG);
     restoreCrimeState(crimeState, saveData.crimeState);
     Object.assign(routeState, saveData.routeState ?? {});
     Object.assign(passengerState, saveData.passengerState ?? {});
@@ -6204,102 +6232,18 @@ function resetWorldTrafficAfterSleep() {
 
 
 
-async function handleSleep(hours) {
-  if(heist.active.value){showPlayerWarning('heist','BANK JOB','Finish the bank job before sleeping.');return;}
-  if(!nearbyHomeParking.value||!serviceSpeedAllowed.value||housing.busy.value)return;
-  if(!await housing.act({op:'sleep',hours:clamp(Number(hours)||1,1,8)})){showPlayerWarning('housing','HOUSING',housing.error.value);return;}
-  if(!nearbyHomeParking.value||!serviceSpeedAllowed.value)return;
-  const safeHours = clamp(Number(hours) || 0, 1, 8);
-  sleepState.modalOpen = false;
-  sleepState.overlayVisible = true;
-  sleepState.overlayFading = false;
-  pressedKeys.clear();
-  player.speed = 0;
-  player.isParked = true;
-  stopPlayerVehicleEngine();
-  handleObjectiveEvent("slept-at-home");
-
-  window.clearTimeout(sleepWarmupTimer);
-  window.clearTimeout(sleepFadeTimer);
-  if (worldTransitionTimer !== null) {
-    window.clearInterval(worldTransitionTimer);
-    worldTransitionTimer = null;
-  }
-  if (playerWarningTimer !== null) {
-    window.clearTimeout(playerWarningTimer);
-    playerWarningTimer = null;
-    activePlayerWarning.value = null;
-  }
-
-  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock),{crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
-  const previousDay = gameClock.day;
-  if(!getSaveAccount())updateGameClock(
-    gameClock,
-    safeHours * 60 / GAME_TIME_CONFIG.gameMinutesPerRealSecond,
-    GAME_TIME_CONFIG,
-  );
-  advanceIntoxication(playerStatus,getAbsoluteGameMinute(gameClock),{sleeping:true,crashEnergy:PLAYER_STATUS_CONFIG.dryGinCrashEnergy});
-  restoreEnergyFromSleep(
-    playerStatus,
-    safeHours * getHomeSleepMultiplier(propertyState),
-    PLAYER_STATUS_CONFIG,
-  );
-  if (playerStatus.energy > PLAYER_WARNING_CONFIG.energy) {
-    handleObjectiveEvent("energy-restored");
-  }
-  resetWorldTrafficAfterSleep();
-
-  if (gameClock.day !== previousDay) {
-    void syncOnlineEconomyDayClose(previousDay);
-    offerBankLoan({
-      economyState,
-      currentDay: gameClock.day,
-      config: DANFO_ECONOMY_CONFIG,
-    });
-    processBankSavingsDay(bankSavingsState, gameClock.day);
-    processStockMarketUpdate();
-
-    const danfoFeesDue =
-      isDrivingDanfo.value ||
-      vehicleState.lastDanfoDrivenDay === previousDay;
-    const brtTaxDue =
-      isDrivingBrt.value ||
-      vehicleState.lastBrtDrivenDay === previousDay;
-
-    if (danfoFeesDue) {
-      processDailyGarageFees({
-        economyState,
-        currentDay: gameClock.day,
-        config: DANFO_ECONOMY_CONFIG,
-      });
-    } else if (brtTaxDue) {
-      processDailyBrtTax({
-        economyState,
-        currentDay: gameClock.day,
-        config: DANFO_ECONOMY_CONFIG,
-      });
-    } else {
-      // Private-car and no-driving days are settled without Danfo/BRT fees,
-      // so choosing a driving job later cannot charge those days retroactively.
-      economyState.lastProcessedDay = Math.max(
-        economyState.lastProcessedDay,
-        gameClock.day,
-      );
-    }
-
-    processCurrentLifeObligations();
-    processCurrentPropertyMortgage();
-    processCurrentRentalIncome();
-    processCurrentBusinessIncome();
-  }
-
-  sleepWarmupTimer = window.setTimeout(() => {
-    sleepState.overlayFading = true;
-    sleepFadeTimer = window.setTimeout(() => {
-      sleepState.overlayVisible = false;
-      sleepState.overlayFading = false;
-    }, 1400);
-  }, 900);
+function handleSleep() {
+ if(heist.active.value){showPlayerWarning('heist','BANK JOB','Finish the bank job before sleeping.');return;}
+ if(!nearbyHomeParking.value||!serviceSpeedAllowed.value)return;
+ sleepState.modalOpen=false;sleepState.sleeping=true;
+ sleepState.overlayVisible=true;sleepState.overlayFading=false;
+ pressedKeys.clear();player.speed=0;player.isParked=true;stopPlayerVehicleEngine();
+ handleObjectiveEvent('slept-at-home');
+}
+function endSleep(){
+ sleepState.sleeping=false;sleepState.overlayVisible=false;sleepState.overlayFading=false;
+ if(playerStatus.energy>PLAYER_WARNING_CONFIG.energy)handleObjectiveEvent('energy-restored');
+ saveGame();
 }
 
 function centreCameraOnPlayer() {
@@ -7065,7 +7009,7 @@ function applyOnlineWallet(){
  const state=connection.wallet.state;
  for(const [target,key] of [[economyState,'economyState'],[bankSavingsState,'bankSavingsState'],[stockMarketState,'stockMarketState'],[customizationState,'customizationState'],[playerInventory,'playerInventory'],[propertyState,'propertyState'],[businessState,'businessState'],[lifeObligationState,'lifeObligationState'],[objectiveState,'objectiveState'],[dailyQuestState,'dailyQuestState']])if(state[key])patchServerState(target,state[key]);
  if(connection.wallet.moto)patchServerState(motoEaziState,connection.wallet.moto);
- gameClock.day=connection.wallet.day;gameClock.minuteOfDay=connection.wallet.minute%1440;
+ syncSharedClock(gameClock,GAME_TIME_CONFIG);
 }
 // Online economy is locally authoritative during the in-game day. Server wallet
 // snapshots are only applied during bootstrap; incidental multiplayer/domain
@@ -7851,6 +7795,7 @@ function handlePlaceAdPurchased(amount) {
       :job-required="!employmentState.selectedJob"
       :inventory-items="inventoryItems"
       :debug-visible="showGrid"
+      :god-mode="godMode"
       :observer-mode="observerMode"
       :current-map-id="currentMapId"
       :race-active="raceState.status === 'active'"
@@ -7898,6 +7843,7 @@ function handlePlaceAdPurchased(amount) {
       @change-sound-settings="handleSoundSettingsChange"
       @consume-inventory-item="handleInventoryConsumption"
       @toggle-debug="showGrid = !showGrid"
+      @toggle-god-mode="godMode = !godMode"
       @toggle-observer="toggleObserverMode"
       @save-game="saveGame"
       @debug-go-coastal-city="handleDebugGoToCoastalCity"
@@ -7943,7 +7889,7 @@ function handlePlaceAdPurchased(amount) {
       :class="{ 'world-map__sleep-overlay--fading': sleepState.overlayFading }"
       aria-label="Sleeping"
     >
-      <span v-if="!sleepState.overlayFading">Sleeping...</span>
+      <div v-if="!sleepState.overlayFading"><p>Sleeping…</p><p v-if="sleepState.sleeping">Health {{Math.round(playerStatus.health)}}% · Energy {{Math.round(playerStatus.energy)}}%</p><button v-if="sleepState.sleeping" type="button" @click="endSleep">End sleep now</button></div>
     </div>
 
     <div
@@ -8274,6 +8220,8 @@ function handlePlaceAdPurchased(amount) {
   transition: width 100ms linear;
 }
 
+.world-map__sleep-overlay button {padding:14px 24px;border:0;border-radius:12px;background:#ffde48;color:#19253d;font:inherit;cursor:pointer;}
+.world-map__sleep-overlay > div {text-align:center;}
 .world-map__sleep-overlay {
   position: absolute;
   inset: 0;

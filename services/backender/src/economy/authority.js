@@ -1,3 +1,4 @@
+import { rebaseCityDates } from './rebaseCityDates.js';
 import {createLifeObligationState,processLifeObligationDay,activateSchoolFees} from '../game-rules/life/systems/lifeObligations.js';
 import {LIFE_OBLIGATION_CONFIG as lifeConfig} from '../game-rules/life/data/lifeObligations.js';
 import {createObjectiveState,recordObjectiveEvent} from '../game-rules/progression/systems/objectiveSystem.js';
@@ -15,20 +16,35 @@ import {readFileSync} from 'node:fs';
 const catalogue=JSON.parse(readFileSync(new URL('../passengers/catalogue.json',import.meta.url),'utf8'));
 export const FINANCIAL_FIELDS=['economyState','bankSavingsState','stockMarketState','customizationState','playerInventory','propertyState','businessState','lifeObligationState','objectiveState','dailyQuestState'];
 export function account(db,id){
- db.wallets ||= {};if(db.wallets[id])return db.wallets[id];
+ db.wallets ||= {};if(db.wallets[id]){
+  const existing=db.wallets[id];
+  if(existing.clockVersion!==1){
+   const oldMinute=existing.originMinute||0,now=sharedCityMinute();
+   const days=Math.floor(now/1440)-Math.floor(oldMinute/1440);
+   rebaseCityDates(existing.state,days,now-oldMinute);
+   for(const domain of [db.careers?.[id],db.heists?.accounts?.[id],db.housing?.accounts?.[id]])rebaseCityDates(domain,days,now-oldMinute);
+   existing.clockVersion=1;existing.originMinute=now;
+  }
+  return existing;
+ }
  const saved=db.gameStates?.[id]?.snapshot||{},profile=db.profiles[id];
- const day=Math.max(1,saved.gameClock?.day||1),minute=(day-1)*1440+(saved.gameClock?.minuteOfDay||420);
+ const minute=sharedCityMinute(),day=Math.floor(minute/1440)+1;
  const state={economyState:createDanfoEconomyState(config,day),bankSavingsState:createBankSavingsState(day),stockMarketState:createStockMarketState(),customizationState:createCustomizationState(),playerInventory:{items:profile.inventory?.items||{}},propertyState:createPropertyState(),businessState:createBusinessState(day),lifeObligationState:createLifeObligationState(lifeConfig),objectiveState:createObjectiveState(OBJECTIVE_DEFINITIONS),dailyQuestState:createDailyQuestState(day)};
  for(const key of FINANCIAL_FIELDS)if(saved[key])state[key]=structuredClone(saved[key]);
+ if(saved.gameClock){
+  const old=(saved.gameClock.day-1)*1440+saved.gameClock.minuteOfDay;
+  rebaseCityDates(state,day-saved.gameClock.day,minute-old);
+ }else state.lifeObligationState.rent.nextDueDay=day+7;
  state.economyState.money=Number.isFinite(profile.money)?Math.round(profile.money):0;
  state.economyState.ownedVehicleIds=[...new Set(profile.owned_vehicle_ids||state.economyState.ownedVehicleIds||[])].filter(id=>id!=='starter-danfo'&&id!=='player-brt'&&!id.startsWith('service-'));
  state.propertyState.playerName=profile.display_name||'Driver';
  const applied={career:saved.careerLocal?.lastReceipt||0,housing:saved.housingLocal?.lastReceipt||0,heist:saved.heistLocal?.lastReceipt||0,club:saved.clubLocal?.lastReceipt||0,government:saved.governmentLocal?.lastReceipt||0,passengers:saved.passengerPopulationLocal?.ack||0};
- const w=db.wallets[id]={version:1,state,applied,requests:{},income:{},ledger:[],originMinute:minute,housingStarted:!!profile.progression?.housingStarted,migratedAt:new Date().toISOString()};
+ const w=db.wallets[id]={version:1,clockVersion:1,state,applied,requests:{},income:{},ledger:[],originMinute:minute,housingStarted:!!profile.progression?.housingStarted,migratedAt:new Date().toISOString()};
  w.state.stockMarketState.lastUpdatedDay=day;w.state.bankSavingsState.lastProcessedDay=day;w.state.businessState.lastProcessedDay=day;
  return w;
 }
-export const minuteOf=w=>w.originMinute;
+export const sharedCityMinute=()=>Math.max(0,(Date.now()-Date.UTC(2026,9,7,0,0,0))/1000)+360;
+export const minuteOf=w=>sharedCityMinute();
 export const dayOf=w=>Math.floor(minuteOf(w)/1440)+1;
 export function audit(w,amount,label,taxable=amount>0){
  if(!Number.isSafeInteger(amount)||Math.abs(amount)>1e12)throw Error('Invalid server transaction.');
@@ -67,8 +83,8 @@ export function requireCash(w,amount){if(!Number.isSafeInteger(amount)||amount<0
 function consume(w,kind,rows,convert=r=>({amount:r.amount,label:r.label,savings:r.savings||0})){
  for(const r of rows||[]){if(r.id<=w.applied[kind])continue;const v=convert(r);cash(w,v.amount,v.label);if(v.savings){w.state.bankSavingsState.balance+=v.savings;audit(w,Math.round(v.savings),'SAVINGS '+v.label,false);}w.applied[kind]=r.id;}
 }
-export function settle(db){
- for(const id of Object.keys(db.profiles)){
+export function settle(db,playerId){
+ for(const id of playerId?[playerId]:Object.keys(db.profiles)){
   const w=account(db,id),state=w.state,day=dayOf(w);
   syncDailyQuestDay(state.dailyQuestState,day);
   const tenancy=Object.values(db.homes||{}).find(h=>h.playerId===id);

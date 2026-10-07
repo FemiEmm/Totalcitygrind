@@ -380,6 +380,7 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  godMode: Boolean,
   debugVisible: {
     type: Boolean,
     default: false,
@@ -496,6 +497,7 @@ const emit = defineEmits([
   "start-driving-test",
   "consume-inventory-item",
   "toggle-debug",
+  "toggle-god-mode",
   "toggle-observer",
   "save-game",
   "track-objective",
@@ -3041,6 +3043,7 @@ function repayLoan() {
             </header>
 
             <button role="switch" :aria-checked="aiTrafficEnabled" class="game-phone__debug-action" @click="$emit('toggle-ai-traffic')"><i class="fa-solid fa-car"/><span><strong>AI traffic</strong><small>Remove or restore AI vehicles. Online players stay.</small></span><ToggleIcon :checked="aiTrafficEnabled" /></button>
+            <button role="switch" :aria-checked="godMode" class="game-phone__debug-action" @click="$emit('toggle-god-mode')"><i class="fa-solid fa-shield-halved"/><span><strong>God Mode</strong><small>Keep health and energy full.</small></span><ToggleIcon :checked="godMode" /></button>
             <button role="switch" :aria-checked="debugVisible" aria-label="Debug view"
               type="button"
               :class="{ 'game-phone__debug-action--active': debugVisible }"

@@ -9,7 +9,7 @@ export function useClub(ctx){
  const now=()=>Date.now()+offset;
  async function act(op='status',drinkId){
   if(!active||busy.value||!ctx.ready())return;
-  if(getSaveAccount()&&connection.presence!=='In city')return;
+  if(getSaveAccount()&&connection.presence!=='In city'&&op!=='status')return;
   if(op==='buy'&&!parked.value){error.value='Park in the CLUB bay first.';return;}
   busy.value=true;if(op==='buy')error.value='';
   try{
@@ -26,7 +26,7 @@ export function useClub(ctx){
  }
  function restore(saved,metadata){offline.value=saved||createClub();Object.assign(local,{lastReceipt:0},metadata||{});events.value=getSaveAccount()?[]:offline.value.events;}
  function update(){if(!parked.value)modal.value=false;}
- function start(){timer=setInterval(()=>{if(!document.hidden)void act();},5000);}
+ function start(){timer=setInterval(()=>{if(!document.hidden)void act();},15000);}
  function stop(){active=false;clearInterval(timer);}
  return {local,offline,events,parked,modal,busy,error,act,restore,update,start,stop,now};
 }

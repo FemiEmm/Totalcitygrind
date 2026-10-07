@@ -54,6 +54,7 @@ async function handleRequest(req,res){
       }
       return send(res,200,{visits:read('siteStats')?.visits||0,users:Object.keys(read('users')||{}).length});
     }
+    if(url.pathname==='/public/clock' && req.method==='GET') return send(res,200,{serverNow:Date.now()});
     const key=req.headers.apikey;
     if(key!==anon&&key!==service) throw new ApiError(401,'Valid apikey header required');
     const token=req.headers.authorization?.replace(/^Bearer /i,'');
@@ -144,6 +145,17 @@ async function handleRequest(req,res){
         throw error;
       }
     }
+    if(url.pathname==='/api/game' && req.method==='POST') {
+      const user=authenticate(token);
+      const input=await body(req,2*1024*1024);
+      const allowed=['bootstrap','claim','save','rankings','delete-account','housing'].includes(input.action)
+        || (input.action==='economy' && ['day-close','session-checkpoint'].includes(input.op))
+        || (input.action==='government' && ['status','vote'].includes(input.op||'status'))
+        || (['club','career'].includes(input.action) && (input.op||'status')==='status');
+      if(!allowed || (input.action==='housing' && input.op==='sleep')) throw new ApiError(403,'This action requires live-world validation');
+      if(['economy','housing','career','government','club','heist'].includes(input.action)) await assertTransactionsAllowed(user.id);
+      return send(res,200,gameState({...input,playerId:user.id,serverPose:null,serverTarget:null,serverTruckBayBlocked:true}));
+    }
     if(url.pathname==='/rest/v1/rpc/game_state' && req.method==='POST') {
       if(key!==service || token!==service) throw new ApiError(403,'Game server access required');
       const gameInput=await body(req, 2 * 1024 * 1024);
@@ -176,9 +188,9 @@ const server=createServer(async(req,res)=>{
     const origin=req.headers.origin;
     if(origin&&!origins.includes(origin))throw new ApiError(403,'Origin not allowed');
     if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
-    if(['POST','PATCH'].includes(req.method)){const max=req.url==='/rest/v1/rpc/game_state'?2*1024*1024:32768;await body(req,max);}
+    if(['POST','PATCH'].includes(req.method)){const max=['/rest/v1/rpc/game_state','/api/game'].includes(req.url)?2*1024*1024:32768;await body(req,max);}
     // Health and preflight do not acquire the game-state lock.
-    const bypass=req.method==='OPTIONS'||(req.method==='GET'&&(req.url==='/health'||req.url?.startsWith('/public/place-ads')));
+    const bypass=req.method==='OPTIONS'||(req.method==='GET'&&(req.url==='/health'||req.url==='/public/clock'||req.url?.startsWith('/public/place-ads')));
     const result=await (bypass?handleRequest(req,res):withStoreRequest(()=>handleRequest(req,res)));
     res.writeHead(result.status);res.end(result.status===204?undefined:JSON.stringify(result.data));
   }catch(error){

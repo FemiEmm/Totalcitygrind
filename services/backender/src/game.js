@@ -172,7 +172,7 @@ export function gameState(input){
    if(input.serverPose&&elapsed>=0&&elapsed<15)w.originMinute+=Math.min(10,elapsed,Math.max(0,Number(input.minutes)||0));
    w.lastClockPulse=now;
   }
-  settle(db);
+  settle(db,id);
   if(!w.housingStarted&&!['bootstrap','rankings','claim','delete-account'].includes(input.action))throw new ApiError(409,'Choose your first home before playing.');
   const trusted={...input,money:w.state.economyState.money,savings:w.state.bankSavingsState.balance,minute:minuteOf(w),day:dayOf(w),gameWeek:Math.floor((dayOf(w)-1)/7),income:w.income,lastReceipt:w.applied[input.action]||0,ack:w.applied.passengers||0};
   if(input.action==='career')trusted.money=w.state.economyState.money;
@@ -204,7 +204,7 @@ export function gameState(input){
   }
   // Day-end economy sync is already the final client checkpoint for the closed
   // day. Do not immediately run next-day financial settlement over it.
-  if(!(input.action==='economy'&&['day-close','session-checkpoint'].includes(input.op)))settle(db);
+  if(!(input.action==='economy'&&['day-close','session-checkpoint'].includes(input.op)))settle(db,id);
   // Project trusted state back into stored saves and bootstrap results.
   if(db.gameStates?.[id])db.gameStates[id].snapshot=protectSnapshot(db,id,db.gameStates[id].snapshot);
   for(const [profileId,wallet] of Object.entries(db.wallets))if(db.profiles[profileId])db.profiles[profileId].bpcWealth=calculateNetWorth(wallet.state,wealthCatalogue);

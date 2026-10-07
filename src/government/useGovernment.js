@@ -20,7 +20,7 @@ export function useGovernment(ctx){
  async function act(input={op:'status'}){
   if(input.op==='read'){local.readThrough=view.value.messages.at(-1)?.id||0;ctx.save();return;}
   if(busy.value||!active||!ctx.ready())return;
-  if(getSaveAccount()&&connection.presence!=='In city')return;
+  if(getSaveAccount()&&connection.presence!=='In city'&&!['status','vote'].includes(input.op||'status'))return;
   busy.value=true;error.value='';
   const previousReceipt=local.lastReceipt,previousRent=view.value.rentPercent,previousElection=view.value.week;
   try{
@@ -53,7 +53,7 @@ export function useGovernment(ctx){
   stopParkingWatch=watch(parked,isParked=>{
    if(isParked)open();else modal.value=false;
   },{flush:'post',immediate:true});
-  timer=setInterval(()=>{if(!document.hidden)void act();},15000);}
+  timer=setInterval(()=>{if(!document.hidden)void act();},60000);}
  function stop(){active=false;stopParkingWatch?.();clearInterval(timer);}
  return {local,offline,view,busy,error,modal,parked,unread,track,earn,publicWage,act,open,update,restore,start,stop};
 }

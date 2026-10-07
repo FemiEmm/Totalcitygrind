@@ -24,9 +24,13 @@ let joining = false;
 let sequence = 0;
 
 async function request(url, options = {}) {
-  const { timeoutMs = 10000, ...fetchOptions } = options;
+  const { timeoutMs = 10000, authRetried = false, ...fetchOptions } = options;
   const response = await fetch(url, { ...fetchOptions, signal: AbortSignal.timeout(timeoutMs) });
   const body = response.status === 204 ? null : await response.json();
+  if(response.status===401 && !authRetried && session && fetchOptions.headers?.Authorization){
+    const token=await accessToken(true);
+    return request(url,{...options,authRetried:true,headers:{...fetchOptions.headers,Authorization:'Bearer '+token}});
+  }
   if (!response.ok) {
     if (response.status === 423) {
       connection.antiCheatStatus = 'review';
@@ -53,9 +57,9 @@ export async function signIn({ email, password, name, username, identifier, acce
   });
   storeSession(value); connection.error = ''; connection.backend = 'Connected';
 }
-async function accessToken() {
+async function accessToken(forceRefresh=false) {
   if (!session) throw new Error('Sign in first.');
-  if (session.expires_at * 1000 > Date.now() + 120000) return session.access_token;
+  if (!forceRefresh && session.expires_at * 1000 > Date.now() + 120000) return session.access_token;
   if (!refreshPromise) refreshPromise = request(backend + '/auth/v1/token?grant_type=refresh_token', {
     method: 'POST', headers: { apikey: anon, 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh_token: session.refresh_token }),
@@ -152,7 +156,7 @@ export async function claimPlayerTransfers() {
 
 export async function getPlaceAds(date) {
   const query = date ? `?date=${encodeURIComponent(date)}` : '';
-  const result = await request(backend + '/public/place-ads' + query);
+  const result = await request(backend + '/public/place-ads' + query, {headers:{apikey:anon}});
   if (Array.isArray(result?.ads)) {
     result.ads = result.ads.map((ad) => ({ ...ad, imageUrl: publicPlaceAdImageUrl(ad.imagePath) }));
   }
@@ -194,6 +198,12 @@ export async function checkConnections() {
   ]);
 }
 let gameQueue=Promise.resolve();
+function usesDirectBackend(action,payload={}) {
+ return ['bootstrap','claim','save','rankings','delete-account','housing'].includes(action)
+  || (action==='economy' && ['day-close','session-checkpoint'].includes(payload.op))
+  || (action==='government' && ['status','vote'].includes(payload.op||'status'))
+  || (['club','career'].includes(action) && (payload.op||'status')==='status');
+}
 export function gameRequest(action,payload={}) {
  const accountId=connection.user?.id;
  const input={requestTime:Date.now(),...payload,requestId:payload.requestId||globalThis.crypto?.randomUUID?.()||('request-'+Date.now()+'-'+Math.random().toString(36).slice(2))};
@@ -203,14 +213,15 @@ async function executeGameRequest(action, payload = {}) {
   const accountId=connection.user?.id;
   if(action==='save')payload={...payload,revision:connection.revision};
   try {
-    const result = await request(server + '/api/game', { method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await accessToken() },
+    const direct=usesDirectBackend(action,payload);
+    const result = await request((direct?backend:server) + '/api/game', { method: 'POST',
+      headers: { apikey: anon, 'Content-Type': 'application/json', Authorization: 'Bearer ' + await accessToken() },
       body: JSON.stringify({ action, ...payload }),
     });
     if(accountId!==connection.user?.id)throw Error('Account changed while request was running.');
     if(action==='save'&&Number.isInteger(result.revision))connection.revision=result.revision;
     if(result.wallet&&(!connection.wallet||result.wallet.version>=connection.wallet.version))connection.wallet=result.wallet;
-    connection.server = 'Connected'; connection.backend = 'Connected'; return result;
+    if(!direct)connection.server = 'Connected'; connection.backend = 'Connected'; return result;
   } catch (error) { connection.error = error.message; throw error; }
 }
 
@@ -223,10 +234,10 @@ export function emergencyGameRequest(action, payload = {}) {
     requestId: payload.requestId || globalThis.crypto?.randomUUID?.() || ('request-' + Date.now() + '-' + Math.random().toString(36).slice(2)),
   };
   try {
-    void fetch(server + '/api/game', {
+    void fetch((usesDirectBackend(action,payload)?backend:server) + '/api/game', {
       method: 'POST',
       keepalive: true,
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      headers: { apikey: anon, 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ action, ...input }),
     });
     return true;
@@ -273,7 +284,11 @@ export function connectWorld(getPose, beforeJoin = async () => {}) {
   };
   client.on('world:snapshot', snapshot);
   client.on('connect_error', error => { connection.presence = 'Connection failed'; connection.error = error.message; });
-  client.on('disconnect', () => { connection.presence = 'Disconnected'; connection.players = []; joinedVehicle = null; joining = false; });
+  client.on('disconnect', reason => {
+    if(reason==='io server disconnect')setTimeout(async()=>{
+      if(socket!==client||!session)return;
+      try { await accessToken(); if(socket===client)client.connect(); } catch(error){connection.error=error.message;}
+    },2000); connection.presence = 'Disconnected'; connection.players = []; joinedVehicle = null; joining = false; });
   client.on('server:error', error => { connection.error = error.message; });
   client.on('server:shutdown', () => { connection.presence = 'Server stopped'; });
   client.on('player:left', ({ playerId }) => { connection.players = connection.players.filter(p => p.id !== playerId); });

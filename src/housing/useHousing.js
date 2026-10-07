@@ -7,7 +7,6 @@ export function useHousing(ctx){
  let active=true,timer=null,queue=Promise.resolve();
  async function perform(input){
   if(!active||!ctx.ready())return false;
-  if(getSaveAccount()&&connection.presence!=='In city'){error.value='Connect to the city first.';return false;}
   if(['move','rent','starter'].includes(input.op)&&ctx.heistActive?.()){error.value='Finish the bank job before changing homes.';return false;}
   busy.value=true;error.value='';
   try{
@@ -32,7 +31,7 @@ export function useHousing(ctx){
  }
  function act(input={op:'status'}){queue=queue.then(()=>perform(input));return queue;}
  function restore(saved,metadata){offline.value=saved||createHousing();Object.assign(local,{lastReceipt:0,lastMessage:0},metadata||{});}
- function start(){timer=setInterval(()=>{if(!document.hidden&&!busy.value)void act();},15000);void act();}
+ function start(){timer=setInterval(()=>{if(!document.hidden&&!busy.value)void act();},60000);void act();}
  function stop(){active=false;clearInterval(timer);}
  return {view,local,offline,busy,error,act,restore,start,stop};
 }

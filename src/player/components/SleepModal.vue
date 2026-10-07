@@ -1,23 +1,16 @@
 <script setup>
 const emit = defineEmits(["close", "sleep"]);
-const durations = Object.freeze([1, 3, 5, 8]);
+
 </script>
 
 <template>
   <section class="sleep-modal" aria-label="Sleep at home">
     <div>
       <span>PLAYER HOME</span>
-      <h2>How long do you want to sleep?</h2>
-      <p>Longer sleep restores more energy and advances the city clock.</p>
+      <h2>Rest at home</h2>
+      <p>Restore health and energy while the city keeps running. Wake up whenever you want.</p>
       <div>
-        <button
-          v-for="hours in durations"
-          :key="hours"
-          type="button"
-          @click="emit('sleep', hours)"
-        >
-          {{ hours }} hour{{ hours > 1 ? "s" : "" }}
-        </button>
+        <button type="button" @click="emit('sleep')">Start sleeping</button>
       </div>
       <button type="button" class="sleep-modal__cancel" @click="emit('close')">
         Cancel

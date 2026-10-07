@@ -34,7 +34,7 @@ export function useCareers(ctx){
    if(ctx.blocked() && ['class','hire','shift','collect'].includes(input.op))throw Error('Finish the current activity first.');
    if(input.op==='shift' && getCourse(state.job?.courseId)?.service==='lawma' && !ctx.truckBayClear())throw Error('The truck bay is occupied. Wait for it to clear.');
    if(getSaveAccount()){
-    if(connection.presence!=='In city')throw Error('Wait for the city connection.');
+    if(connection.presence!=='In city'&&input.op!=='status')throw Error('Wait for the city connection.');
     const result=await gameRequest('career',{...input,minute:minute.value,report:ctx.report(),blocked:ctx.blocked()});
     if(!active)return;
     Object.assign(state,restoreCareerState(result.state));occupied.value=result.occupied||{};notice.value=result.notice||null;
