@@ -3659,9 +3659,11 @@ function repayLoan() {
   font-family: "Basic", sans-serif;
 }
 
-/* Tablet landscape: lift the phone by roughly one quarter of its own height. */
-@media (pointer: coarse) and (min-width: 701px) and (max-width: 1400px) {
-  .game-phone { transform: translateY(-25%); }
+/* The open phone is anchored to the viewport independently of its launcher. */
+.game-phone--open {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 

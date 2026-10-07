@@ -547,7 +547,6 @@ onBeforeUnmount(() => {
     <button v-if="LOCAL_STUDIO && !worldStarted" style="position:fixed;top:16px;left:16px;z-index:2147483647;background:#ffd43b;color:#17213a;padding:12px;border:0;border-radius:6px;font-weight:bold" @click="startLocalFilmingStudio">Start local filming studio</button>
     <button v-if="screen === 'paused'" class="game__online" @click="onlinePanelOpen = true"><i class="fa-solid fa-globe" aria-hidden="true" /> Online city</button>
     <OnlinePanel v-if="onlinePanelOpen" :active="onlineMode" :busy="onlineBusy" @close="onlinePanelOpen = false" @enter="enterOnlineCity" @logout="leaveOnlineAccount" />
-    <div v-if="onlineMode && screen === 'playing'" class="game__online-status">{{ connection.presence }} · {{ connection.save }}</div>
     <WorldMap
       v-if="worldStarted"
       :key="worldInstanceKey"
@@ -637,7 +636,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .game__online { position:absolute; left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:25000; background:#ffdb3b; color:#17213a; border:0; border-radius:12px; padding:10px 18px; min-height:42px; font:inherit; cursor:pointer; }
-.game__online-status { position:absolute; bottom:4px; left:8px; max-width:45%; font-size:10px; color:white; background:#17213adb; border-radius:5px; padding:3px 6px; z-index:24001; pointer-events:none; }
 .game__toolbar { position:absolute; z-index:24000; top:max(8px, env(safe-area-inset-top)); left:auto; right:max(16px, env(safe-area-inset-right)); display:flex; gap:8px; }
 .game__toolbar .game__pause { position:static; width:44px; height:44px; }
 .game__quests { display:grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid rgb(23 33 58 / 16%); border-radius:11px; color:#17213a; background:#ffd43b; font-weight:bold; cursor:pointer; box-shadow:var(--comic-shadow-small); }
