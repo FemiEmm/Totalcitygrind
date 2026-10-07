@@ -1,5 +1,7 @@
 import { shallowReactive } from 'vue';
 import { io } from 'socket.io-client';
+import { publicPlaceAdImageUrl } from '../advertising/placeAdStorage.js';
+import { setTransactionLock } from '../security/transactionLock.js';
 
 const backend = (import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
 const server = (import.meta.env.VITE_GAME_SERVER_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
@@ -11,6 +13,7 @@ export const connection = shallowReactive({
   user: session?.user || null, backend: 'Not checked', server: 'Not checked',
   presence: 'Offline', players: [], playerId: null, capacity: 100,
   wallet: null, save: 'Not connected', lastSaved: null, error: '', revision: 0, home: null, homesAvailable: null,
+  antiCheatStatus: 'active', transactionsLocked: false, antiCheatReason: null, antiCheatFlaggedAt: null,
 });
 let refreshPromise = null;
 let socket = null;
@@ -21,9 +24,18 @@ let joining = false;
 let sequence = 0;
 
 async function request(url, options = {}) {
-  const response = await fetch(url, { ...options, signal: AbortSignal.timeout(10000) });
+  const { timeoutMs = 10000, ...fetchOptions } = options;
+  const response = await fetch(url, { ...fetchOptions, signal: AbortSignal.timeout(timeoutMs) });
   const body = response.status === 204 ? null : await response.json();
-  if (!response.ok) { const error = new Error(body?.message || body?.msg || `Request failed (${response.status})`); error.status = response.status; throw error; }
+  if (!response.ok) {
+    if (response.status === 423) {
+      connection.antiCheatStatus = 'review';
+      connection.transactionsLocked = true;
+      connection.antiCheatReason = body?.code || 'transactions_under_review';
+      setTransactionLock(true);
+    }
+    const error = new Error(body?.message || body?.msg || `Request failed (${response.status})`); error.status = response.status; error.code = body?.code; throw error;
+  }
   return body;
 }
 function storeSession(value) {
@@ -50,10 +62,116 @@ async function accessToken() {
   }).then(value => { storeSession(value); return value.access_token; }).finally(() => { refreshPromise = null; });
   return refreshPromise;
 }
+async function authenticatedBackendRequest(path, options = {}) {
+  const headers = {
+    apikey: anon,
+    ...(options.headers || {}),
+    Authorization: 'Bearer ' + await accessToken(),
+  };
+  return request(backend + path, { ...options, headers });
+}
+
+export async function refreshAntiCheatStatus() {
+  if (!connection.user?.id) return { transactionStatus: 'active', transactionsLocked: false };
+  const result = await authenticatedBackendRequest('/api/anti-cheat/status');
+  connection.antiCheatStatus = result?.transactionStatus || 'active';
+  connection.transactionsLocked = result?.transactionsLocked === true;
+  setTransactionLock(connection.transactionsLocked);
+  connection.antiCheatReason = result?.reason || null;
+  connection.antiCheatFlaggedAt = result?.flaggedAt || null;
+  return result;
+}
+
+let antiCheatCheckPromise = null;
+let antiCheatLastReportedBalance = null;
+export async function reportBalanceForAntiCheat(currentBalance) {
+  if (!connection.user?.id || connection.transactionsLocked) return null;
+  const balance = Math.round(Number(currentBalance));
+  if (!Number.isSafeInteger(balance) || balance <= 100_000_000) return null;
+  if (antiCheatLastReportedBalance !== null && Math.abs(balance - antiCheatLastReportedBalance) < 1_000_000) return null;
+  antiCheatLastReportedBalance = balance;
+  if (antiCheatCheckPromise) return antiCheatCheckPromise;
+  antiCheatCheckPromise = authenticatedBackendRequest('/api/anti-cheat/check-balance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ currentBalance: balance }),
+  }).then((result) => {
+    connection.antiCheatStatus = result?.transactionStatus || 'active';
+    connection.transactionsLocked = result?.transactionsLocked === true;
+  setTransactionLock(connection.transactionsLocked);
+    connection.antiCheatReason = result?.reason || null;
+    connection.antiCheatFlaggedAt = result?.flaggedAt || null;
+    if (connection.transactionsLocked) connection.error = 'Transactions are temporarily unavailable while account activity is reviewed.';
+    return result;
+  }).finally(() => { antiCheatCheckPromise = null; });
+  return antiCheatCheckPromise;
+}
+
+export function assertClientTransactionsAllowed() {
+  if (connection.transactionsLocked) throw new Error('Transactions are temporarily unavailable while account activity is reviewed.');
+}
+
+setInterval(() => {
+  if (connection.user?.id && connection.transactionsLocked) void refreshAntiCheatStatus().catch(() => {});
+}, 60_000);
+
+export async function getPlayerMessages() {
+  return authenticatedBackendRequest('/api/messages');
+}
+
+export async function sendPlayerMessage(recipientUsername, text) {
+  return authenticatedBackendRequest('/api/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipientUsername, text }),
+  });
+}
+
+export async function getPlayerTransfers() {
+  return authenticatedBackendRequest('/api/transfers');
+}
+
+export async function sendPlayerTransfer(recipientUsername, amount, availableBalance) {
+  assertClientTransactionsAllowed();
+  return authenticatedBackendRequest('/api/transfers', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ recipientUsername, amount, availableBalance }),
+  });
+}
+
+export async function claimPlayerTransfers() {
+  assertClientTransactionsAllowed();
+  return authenticatedBackendRequest('/api/transfers/claim', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+}
+
+
+export async function getPlaceAds(date) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  const result = await request(backend + '/public/place-ads' + query);
+  if (Array.isArray(result?.ads)) {
+    result.ads = result.ads.map((ad) => ({ ...ad, imageUrl: publicPlaceAdImageUrl(ad.imagePath) }));
+  }
+  return result;
+}
+
+export async function bookPlaceAd({ billboardId, bookingDate, imagePath, availableBalance }) {
+  assertClientTransactionsAllowed();
+  return authenticatedBackendRequest('/api/place-ads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ billboardId, bookingDate, imagePath, availableBalance }),
+  });
+}
+
 export async function signOut() {
   disconnectWorld();
   try { if (session) await request(backend + '/auth/v1/logout?scope=local', { method: 'POST', headers: { apikey: anon, Authorization: 'Bearer ' + await accessToken() } }); }
-  finally { storeSession(null); connection.save = 'Not connected'; connection.revision = 0; connection.home = null; connection.homesAvailable = null; connection.lastSaved = null; }
+  finally { storeSession(null); connection.save = 'Not connected'; connection.revision = 0; connection.home = null; connection.homesAvailable = null; connection.lastSaved = null; connection.antiCheatStatus='active'; connection.transactionsLocked=false; setTransactionLock(false); connection.antiCheatReason=null; connection.antiCheatFlaggedAt=null; antiCheatLastReportedBalance=null; }
 }
 export async function deleteOnlineAccount(confirmation) {
   const id = connection.user?.id;
@@ -124,6 +242,7 @@ export async function bootstrapAccount() {
   connection.lastSaved = data.save?.updatedAt || null;
   connection.save = data.save ? 'Saved on Backender' : 'Choose a home';
   connection.error = '';
+  try { await refreshAntiCheatStatus(); } catch { /* Gameplay can continue if the review-status check is temporarily unavailable. */ }
   return data;
 }
 export async function uploadSave(snapshot) {

@@ -1,4 +1,5 @@
 import { notifyTransaction, createMarketReceiptId } from './transactionObservers.js';
+import { isTransactionLocked } from '../../security/transactionLock.js';
 ﻿const RATE_OFFERS = Object.freeze([
   Object.freeze({ rate: 0.02, weight: 35 }),
   Object.freeze({ rate: 0.05, weight: 35 }),
@@ -99,6 +100,7 @@ export function processBankSavingsDay(state, currentDay) {
 }
 
 export function depositIntoSavings(state, economyState, requestedAmount) {
+  if (isTransactionLocked()) return false;
   const amount = Math.min(
     Math.max(0, Math.round(Number(requestedAmount) || 0)),
     Math.max(0, economyState.money),
@@ -116,6 +118,7 @@ export function depositIntoSavings(state, economyState, requestedAmount) {
 }
 
 export function withdrawFromSavings(state, economyState, requestedAmount) {
+  if (isTransactionLocked()) return false;
   const amount = Math.min(
     Math.max(0, Math.round(Number(requestedAmount) || 0)),
     state.balance,
@@ -133,6 +136,7 @@ export function withdrawFromSavings(state, economyState, requestedAmount) {
 }
 
 export function withdrawSavingsForExpense(state, requestedAmount, label = "SAVINGS PAYMENT") {
+  if (isTransactionLocked()) return 0;
   const amount = Math.min(
     Math.max(0, Math.round(Number(requestedAmount) || 0)),
     state.balance,

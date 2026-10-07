@@ -1,6 +1,7 @@
 import { STARTER_HOMES } from '../data/starterHomes.js';
 import { getPropertyById } from "../data/properties.js";
 import { createRentalState } from "./propertyRentalSystem.js";
+import { isTransactionLocked } from '../../security/transactionLock.js';
 
 export function createPropertyState() {
   return {
@@ -54,6 +55,7 @@ export function purchaseProperty({
   savings = 0,
   currentDay,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0, property: null };
   const property = getPropertyById(propertyId);
   const quote = getPropertyPurchaseQuote(property, paymentMethod);
   if (

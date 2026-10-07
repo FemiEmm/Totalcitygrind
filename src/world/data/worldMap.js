@@ -1,3 +1,4 @@
+import {northernApproachRoads} from './northernApproaches.js';
 import { addWorkplaceParking, workplaceParkingClearances } from './workplaceParking.js';
 import { schoolCampus, lastmaCompound, lawmaCompound, governorCompound, LASTMA_NORTH_EDGE_OPENING } from './civicSites.js';
 import { POLICE_LOTS, POLICE_OBSTACLES } from '../../police/policeSystem.js';
@@ -27,6 +28,7 @@ import { LANDMARK_ASSETS } from "./landmarkAssets.js";
 import {
   getGenericBuildingVisual,
 } from "./genericBuildingAssets.js";
+import { BILLBOARD_BY_BUILDING_ID } from "../../advertising/billboards.js";
 
 export {
   WORLD_HEIGHT,
@@ -152,6 +154,8 @@ for (
 export const edgeBorderTiles = Object.freeze(
   edgeTileCandidates
     .filter((tile) => {
+      // The old mainland north edge now leads into Sango Otta. It is visual mud, not a collision wall.
+      if (tile.y === -GRID_SIZE) return false;
       if (tile.y === -GRID_SIZE && tile.x >= 46*GRID_SIZE && tile.x < 48*GRID_SIZE) return false;
       if (tile.y === -GRID_SIZE && tile.x >= 54*GRID_SIZE && tile.x < 58*GRID_SIZE) return false;
       // Keep both lanes open where the estate extension crosses the old north boundary.
@@ -239,6 +243,7 @@ export const perimeterRoads = [
 ];
 
 export const roads = [
+  ...northernApproachRoads,
   ...districtRoads,
   ...perimeterRoads,
   ...edgeSpawnGateRoads,
@@ -461,10 +466,11 @@ export const genericBuildings = districts.flatMap((district) => {
           ? worldBlock.id
           : `${worldBlock.id}-part-${index + 1}`,
       };
+      const billboard = pieces.length === 1 ? BILLBOARD_BY_BUILDING_ID.get(worldBlock.id) : null;
 
       return addPedestrianSetback({
         ...building,
-        ...getGenericBuildingVisual(building),
+        ...(billboard ? { billboardId: billboard.id, billboardLabel: billboard.label } : getGenericBuildingVisual(building)),
       });
     });
   });
@@ -596,3 +602,31 @@ export function getDistrictAtWorldPosition(x, y) {
 
 
 
+
+// Deterministic woodland placement, built once; keep all existing plots and road clearances.
+const forestReserved=[...roads,...obstacles,...districts.filter(d=>d.id!=='northern-residential').map(d=>({x:d.worldX,y:d.worldY,width:d.width,height:d.height})),{x:12*GRID_SIZE,y:-67*GRID_SIZE,width:26*GRID_SIZE,height:64*GRID_SIZE}];
+export const northernForestTiles=[];
+for(let row=-69;row<0;row++)for(let column=0;column<64;column++){
+ const tile={x:column*GRID_SIZE,y:row*GRID_SIZE,width:GRID_SIZE,height:GRID_SIZE};
+ if(forestReserved.some(r=>tile.x<r.x+r.width+10&&tile.x+tile.width>r.x-10&&tile.y<r.y+r.height+10&&tile.y+tile.height>r.y-10))continue;
+ const seed=((column*73856093)^(row*19349663))>>>0;
+ const positions=seed%2?[[.27,.28],[.72,.38],[.46,.75]]:[[.3,.32],[.69,.7]];
+ northernForestTiles.push({...tile,trees:positions.map(([x,y],i)=>({x:tile.x+x*GRID_SIZE,y:tile.y+y*GRID_SIZE,size:(.48+((seed>>>(i*4))%9)/100)*GRID_SIZE,rotation:((seed>>>(i*3))%4)*Math.PI/2}))});
+}
+
+// Only the new northern trees are solid. Compact individual trunks keep
+// canopy gaps passable and use the existing spatial collision index.
+export const northernTreeObstacles = northernForestTiles.flatMap((tile) =>
+  tile.trees.map((tree, index) => {
+    const diameter = tree.size * 0.42;
+    return {
+      id: `northern-tree-${tile.x}-${tile.y}-${index}`,
+      type: 'tree',
+      x: tree.x - diameter / 2,
+      y: tree.y - diameter / 2,
+      width: diameter,
+      height: diameter,
+    };
+  }),
+);
+obstacles.push(...northernTreeObstacles);

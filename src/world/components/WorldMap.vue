@@ -21,12 +21,13 @@ import { COAST_CITY_ENABLED, COAST_CITY_LOCK_MESSAGE } from "../../game/worldAva
 import { migrateLocationLabels } from "../../game/migrateLocationLabels.js";
 import PoliceArrest from '../../police/PoliceArrest.vue';
 import policeCarUrl from '../../assets/population/police-pickup.png';
-import { gameRequest } from '../../network/connection.js';
+import { gameRequest, getPlaceAds, reportBalanceForAntiCheat } from '../../network/connection.js';
 import { getSaveAccount } from '../../game/saveSlots.js';
 import { createCrimeState, restoreCrimeState, addCrime, POLICE_POSTS, POLICE_OBSTACLES, checkPoliceHotspot } from "../../police/policeSystem.js";
 import { calculateNetWorth } from "../../wealth/netWorth.js";
 import wealthCatalogue from "../../wealth/catalogue.json";
 import { connection } from "../../network/connection.js";
+import { activeAdForBillboard, realWorldAdDate, realWorldAdSlot } from '../../advertising/billboards.js';
 import { STARTER_HOMES } from '../../property/data/starterHomes.js';
 import { createCustomizationState, restoreCustomizationState, applyCustomization } from '../../customization/state.js';
 import { drawCustomizedVehicle } from '../../customization/rendering.js';
@@ -47,6 +48,9 @@ import untarredRoadTileUrl from "../../assets/roads/untarred-road-tile.png";
 import busStopCanopyUrl from "../../assets/world/bus-stop-canopy.png";
 import grassTileUrl from "../../assets/ground/grass-tile.png";
 import trafficLightConcreteUrl from "../../assets/ground/traffic-light-concrete.png";
+import sangoSoilUrl from '../../assets/environment/sango-soil-topdown-1x1.png';
+import sangoTreeUrl from '../../assets/environment/sango-tree-topdown-1x1.png';
+import {northernForestTiles} from '../data/worldMap.js';
 import dryMudRowUrl from "../../assets/ground/residential/muddy-ground-1x4-dry.png";
 import parkingBayTileUrl from "../../assets/roads/parking-bay-tile.png";
 import { getCameraDimensions, GRID_COLUMNS, GRID_ROWS, GRID_SIZE, WORLD_HEIGHT, WORLD_MAX_X, WORLD_MAX_Y, WORLD_MIN_X, WORLD_MIN_Y, WORLD_WIDTH } from "../data/mapConstants";
@@ -561,9 +565,21 @@ const economyState = reactive(
     gameClock.day,
   ),
 );
+watch(
+  () => economyState.money,
+  (money) => {
+    if (connection.user?.id && Number(money) > 100_000_000) void reportBalanceForAntiCheat(money).catch(() => {});
+  },
+);
+function blockReviewedTransaction() {
+  if (!connection.transactionsLocked) return false;
+  connection.error = 'Transactions are temporarily unavailable while account activity is reviewed.';
+  return true;
+}
 const bankSavingsState = reactive(createBankSavingsState(gameClock.day));
 const customizationState = reactive(createCustomizationState());
 function handleCustomizeVehicle({ kind, id }) {
+  if (blockReviewedTransaction()) return;
   const result = applyCustomization(customizationState, activeVehicleConfig.value.id, kind, id, economyState.money);
   if (!result.ok) return;
   if (result.price > 0) chargeExpense({ economyState, amount: result.price, type: 'vehicle-customization', label: result.label, config: DANFO_ECONOMY_CONFIG });
@@ -573,9 +589,9 @@ let agberoPaymentSequence = 0;
 const stockMarketState = reactive(createStockMarketState());
 const stockMarketView = computed(() => getStockMarketView(stockMarketState));
 const bankMessageFeed = computed(() => {
-  return [...bankSavingsState.messages, ...economyState.transactions].sort(
-    (left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0),
-  );
+  return bankSavingsState.messages
+    .filter(message => message.direction === "notice")
+    .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
 });
 
 function processStockMarketUpdate() {
@@ -587,6 +603,7 @@ function processStockMarketUpdate() {
   });
 }
 function handleSubscribeStockAdviser() {
+  if (blockReviewedTransaction()) return;
   const cost = subscribeStockAdviser(stockMarketState, gameClock.day, economyState.money);
   if (cost !== null) {
     if (cost > 0) chargeExpense({ economyState, amount: cost, type: "stock-adviser", label: "STOCK ADVISER - 7 DAYS", config: DANFO_ECONOMY_CONFIG });
@@ -1103,6 +1120,7 @@ function freezeForPolice() {
   pressedKeys.clear(); player.speed = 0; stopPlayerVehicleEngine(); activeServiceModal.value = null;
 }
 function payPoliceBribe() {
+  if (blockReviewedTransaction()) return;
   if(crimeState.heistCustody || (heist.active.value && heist.view.value?.account.loot > 0))return;
   if (policeStationRequest || crimeState.status !== 'arrested' || economyState.money < crimeState.bribe) return;
   chargeExpense({ economyState, amount:crimeState.bribe, type:'police-bribe', label:'POLICE BRIBE', config:DANFO_ECONOMY_CONFIG });
@@ -1755,6 +1773,7 @@ let grassTileImage = null;
 let trafficLightConcreteImage = null;
 let parkingBayTileImage = null;
 let dryMudRowImage = null;
+let sangoSoilImage=null,sangoTreeImage=null;
 let towTruckSpriteImage = null;
 let towYardTileImage = null;
 const purchasedVehicleSprites = new Map();
@@ -1879,6 +1898,11 @@ function hornNearestAiVehicleAfterCollision() {
 const populationVehicleSprites = new Map();
 const landmarkSprites = new Map();
 const genericBuildingSprites = new Map();
+const billboardAdSprites = new Map();
+const billboardAdBookings = ref([]);
+let billboardRefreshTimer = null;
+let billboardSlotTimer = null;
+let billboardLastSlotKey = '';
 const staticMapTiles = new Map();
 const pendingCanvasImages = new Set();
 const activeTowTruckBuffer = [];
@@ -2005,6 +2029,7 @@ function requestMappedCanvasImage({
 
   pendingCanvasImages.add(source);
   const image = new Image();
+  image.crossOrigin = "anonymous";
 
   image.addEventListener("load", () => {
     pendingCanvasImages.delete(source);
@@ -2020,6 +2045,38 @@ function requestMappedCanvasImage({
   });
 
   image.src = source;
+}
+
+function currentBillboardBooking(billboardId) {
+  return activeAdForBillboard(billboardAdBookings.value, billboardId, new Date());
+}
+
+async function refreshBillboardAds() {
+  try {
+    const result = await getPlaceAds(realWorldAdDate());
+    billboardAdBookings.value = Array.isArray(result?.ads) ? result.ads : [];
+    for (const booking of billboardAdBookings.value) {
+      if (!booking?.imageUrl) continue;
+      requestMappedCanvasImage({
+        source: booking.imageUrl,
+        target: billboardAdSprites,
+        key: booking.imageUrl,
+        invalidateStaticMap: true,
+      });
+    }
+    invalidateStaticMapCache();
+  } catch {
+    // Billboards remain usable as PLACE AD HERE placeholders if refresh fails.
+  }
+}
+
+function refreshBillboardSlot() {
+  const key = `${realWorldAdDate()}:${realWorldAdSlot()}`;
+  if (key !== billboardLastSlotKey) {
+    billboardLastSlotKey = key;
+    invalidateStaticMapCache();
+    void refreshBillboardAds();
+  }
 }
 
 function isPlayerInsideZone(zone) {
@@ -2577,6 +2634,16 @@ function renderStaticMapTile(column, row) {
   context.imageSmoothingEnabled = true;
   context.translate(-tileX, -tileY);
 
+  // Soil under the entire northern extension, including the former black gaps.
+  if(currentMapId.value==='mainland'&&tileY<0){
+    const firstX=Math.max(0,Math.floor(tileX/GRID_SIZE)),lastX=Math.min(64,Math.ceil((tileX+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
+    const firstY=Math.max(-69,Math.floor(tileY/GRID_SIZE)),lastY=Math.min(0,Math.ceil((tileY+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
+    context.fillStyle='#b16d36';
+    for(let y=firstY;y<lastY;y++)for(let x=firstX;x<lastX;x++){
+      if(sangoSoilImage)context.drawImage(sangoSoilImage,x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
+      else context.fillRect(x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
+    }
+  }
   districts.forEach((district) => {
     const districtBounds = {
       x: district.worldX,
@@ -2617,6 +2684,37 @@ function renderStaticMapTile(column, row) {
     }
   });
 
+  // The original mainland ended two cells below Sango Otta. Paint that former black/blue
+  // boundary as drivable dry mud so the northern extension reads as continuous land.
+  const northMainlandMudTransition = {
+    x: 0,
+    y: -2 * GRID_SIZE,
+    width: WORLD_WIDTH,
+    height: 2 * GRID_SIZE,
+  };
+  if (staticItemTouchesTile(northMainlandMudTransition, tileBounds)) {
+    context.fillStyle = '#aa783f';
+    context.fillRect(
+      northMainlandMudTransition.x,
+      northMainlandMudTransition.y,
+      northMainlandMudTransition.width,
+      northMainlandMudTransition.height,
+    );
+    if (dryMudRowImage) {
+      for (let row = 0; row < 2; row += 1) {
+        for (let x = 0; x < WORLD_WIDTH; x += 4 * GRID_SIZE) {
+          const width = Math.min(4 * GRID_SIZE, WORLD_WIDTH - x);
+          context.drawImage(
+            dryMudRowImage,
+            dryMudRowImage.width * 0.02, dryMudRowImage.height * 0.15,
+            dryMudRowImage.width * 0.955, dryMudRowImage.height * 0.68,
+            x, (-2 + row) * GRID_SIZE, width, GRID_SIZE,
+          );
+        }
+      }
+    }
+  }
+
   edgeBorderTiles.forEach((tile) => {
     if (!staticItemTouchesTile(tile, tileBounds)) {
       return;
@@ -2631,6 +2729,13 @@ function renderStaticMapTile(column, row) {
     );
   });
 
+  if(currentMapId.value==='mainland'&&sangoTreeImage){
+    for(const tile of northernForestTiles){
+      if(!staticItemTouchesTile(tile,tileBounds))continue;
+      if(sangoSoilImage)context.drawImage(sangoSoilImage,tile.x,tile.y,GRID_SIZE,GRID_SIZE);
+      for(const tree of tile.trees){context.save();context.translate(tree.x,tree.y);context.rotate(tree.rotation);context.drawImage(sangoTreeImage,-tree.size/2,-tree.size/2,tree.size,tree.size);context.restore();}
+    }
+  }
   const orderedRoads = getRoadsInRenderOrder();
   orderedRoads.forEach((road) => {
     if (staticItemTouchesTile(road, tileBounds)) {
@@ -2866,6 +2971,36 @@ function drawBuildingBody(
   checkVisibility = true,
 ) {
   if (checkVisibility && !isVisible(building)) {
+    return;
+  }
+
+  if (building.billboardId) {
+    const x = building.lotX ?? building.x;
+    const y = building.lotY ?? building.y;
+    const width = building.lotWidth ?? building.width;
+    const height = building.lotHeight ?? building.height;
+    const inset = Math.max(8, Math.min(width, height) * 0.045);
+    context.save();
+    context.fillStyle = '#ffffff';
+    context.fillRect(x, y, width, height);
+    context.strokeStyle = '#111111';
+    context.lineWidth = 7;
+    context.strokeRect(x + 3.5, y + 3.5, width - 7, height - 7);
+    const booking = currentBillboardBooking(building.billboardId);
+    const sprite = booking?.imageUrl ? billboardAdSprites.get(booking.imageUrl) : null;
+    if (booking?.imageUrl && !sprite) {
+      requestMappedCanvasImage({ source: booking.imageUrl, target: billboardAdSprites, key: booking.imageUrl, invalidateStaticMap: true });
+    }
+    if (sprite) {
+      drawImageContained(context, sprite, x + inset, y + inset, width - inset * 2, height - inset * 2);
+    } else {
+      context.fillStyle = '#111111';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.font = `bold ${Math.max(16, Math.floor(Math.min(width, height) * 0.12))}px Basic`;
+      context.fillText('PLACE AD HERE', x + width / 2, y + height / 2, width - inset * 2);
+    }
+    context.restore();
     return;
   }
 
@@ -5681,6 +5816,7 @@ defineExpose({
 });
 
 function handleMechanicCall() {
+  if (blockReviewedTransaction()) return;
   if (economyState.gameOver) return;
   if (propertyState.starterHomeRisk?.missingCarPart) {
     const replacementCost = 12000;
@@ -5700,6 +5836,7 @@ function handleMechanicCall() {
   }
 }
 function handleFuelAttendantCall() {
+  if (blockReviewedTransaction()) return;
   if (economyState.gameOver) return;
 
   const quote = roadsideFuelQuote.value;
@@ -5752,6 +5889,7 @@ function purchaseHealthTreatment({
   type,
   useCoupon = false,
 }) {
+  if (blockReviewedTransaction()) return;
   const applyCoupon = Boolean(useCoupon) && lifeObligationState.discountCoupons > 0;
   const payableCost = Math.round(cost * (applyCoupon ? 0.5 : 1));
   if (
@@ -5777,6 +5915,7 @@ function purchaseHealthTreatment({
 }
 
 function handleHealthTreatment(options = {}) {
+  if (blockReviewedTransaction()) return;
   const service = nearbyHealthService.value;
 
   if (!service) {
@@ -5796,6 +5935,7 @@ function handleHealthTreatment(options = {}) {
 }
 
 function handleDoctorCall() {
+  if (blockReviewedTransaction()) return;
   purchaseHealthTreatment({
     provider: "Mobile Doctor",
     cost: PLAYER_STATUS_CONFIG.doctorCallCost,
@@ -5856,6 +5996,7 @@ function handleEnergyDepleted() {
 }
 
 function handleFoodPurchase(itemId) {
+  if (blockReviewedTransaction()) return;
   const item = availableFoodItems.value.find((candidate) => {
     return candidate.id === itemId;
   });
@@ -5924,6 +6065,7 @@ function handlePocketFoodCycle() {
 }
 
 function handleFinePayment() {
+  if (blockReviewedTransaction()) return;
   const amount = fineState.outstandingAmount;
 
   if (amount <= 0 || economyState.money < amount) {
@@ -5942,6 +6084,7 @@ function handleFinePayment() {
 }
 
 function handleRentPayment() {
+  if (blockReviewedTransaction()) return;
   const amount = lifeObligationView.value.rent.amountDue;
 
   if (
@@ -5973,6 +6116,7 @@ function handleRentPayment() {
 }
 
 function handleSchoolFeesPayment(requestedAmount) {
+  if (blockReviewedTransaction()) return;
   const remaining =
     lifeObligationView.value.schoolFees.remainingAmount;
   const amount = Math.min(
@@ -6008,6 +6152,7 @@ function handleSchoolFeesPayment(requestedAmount) {
 }
 
 function handleFamilyRequestPayment(requestedAmount) {
+  if (blockReviewedTransaction()) return;
   const familyView = lifeObligationView.value.familyRequests;
   const activeRequest = familyView.entries.find((entry) => entry.id === familyView.activeId);
   if (!activeRequest) return;
@@ -6335,6 +6480,7 @@ function handleCarOwnerCall() {
 }
 
 function handleVehiclePurchase(vehicleId) {
+  if (blockReviewedTransaction()) return;
   const vehicle = PURCHASABLE_CARS.find((candidate) => {
     return candidate.id === vehicleId;
   });
@@ -6355,6 +6501,7 @@ function handleVehiclePurchase(vehicleId) {
 }
 
 async function handlePropertyPurchase({propertyId,paymentMethod}) {
+  if (blockReviewedTransaction()) return;
  if(await housing.act({op:'buy',propertyId,paymentMethod})){
   handleObjectiveEvent(propertyId==='wealthy-estate-home'?'wealthy-home-purchased':'first-home-purchased');
   closeServiceModal();
@@ -6362,6 +6509,7 @@ async function handlePropertyPurchase({propertyId,paymentMethod}) {
 }
 
 function handleBusinessOfficePurchase() {
+  if (blockReviewedTransaction()) return;
   const result = purchaseBusinessOffice({
     state: businessState,
     money: economyState.money,
@@ -6382,6 +6530,7 @@ function handleBusinessOfficePurchase() {
 }
 
 function handleBusinessAssetPurchase(assetId) {
+  if (blockReviewedTransaction()) return;
   const result = purchaseBusinessAsset({
     state: businessState,
     assetId,
@@ -6404,6 +6553,7 @@ function handleBusinessAssetPurchase(assetId) {
 }
 
 function handleRaceStart() {
+  if (blockReviewedTransaction()) return;
   if (
     currentMapId.value !== "coastal-city" ||
     !nearbyRaceCircuit.value ||
@@ -6441,6 +6591,7 @@ function handleTrackedObjectiveSelection(objectiveId) {
 }
 
 function handleObjectiveRewardClaim(objectiveId) {
+  if (blockReviewedTransaction()) return;
   const reward = claimObjectiveReward(
     objectiveState,
     objectiveId,
@@ -6470,6 +6621,7 @@ function handleMapDestinationSelection(locationId) {
 }
 
 function handleStartDrivingTest() {
+  if (blockReviewedTransaction()) return;
   if (prepareDriverLicenceSchoolNavigation(driverLicenceState)) {
     manualMapDestination.value = null;
     playGameSound("confirm");
@@ -6567,14 +6719,17 @@ function handleRejectMotoEaziRequest(requestId) {
 }
 
 function handleSavingsDeposit(amount) {
+  if (blockReviewedTransaction()) return;
   depositIntoSavings(bankSavingsState, economyState, amount);
 }
 
 function handleSavingsWithdrawal(amount) {
+  if (blockReviewedTransaction()) return;
   withdrawFromSavings(bankSavingsState, economyState, amount);
 }
 
 function handleBuyStock(companyId) {
+  if (blockReviewedTransaction()) return;
   const price = buyStock(stockMarketState, companyId, economyState.money);
   if (!price) return;
   chargeExpense({
@@ -6588,6 +6743,7 @@ function handleBuyStock(companyId) {
 }
 
 function handleSellStock(companyId) {
+  if (blockReviewedTransaction()) return;
   const basis=(stockMarketState.investedPrincipal[companyId]||0)/Math.max(1,stockMarketState.holdings[companyId]||0);
   const proceeds = sellStock(stockMarketState, companyId);
   if (!proceeds) return;
@@ -6603,6 +6759,7 @@ function handleSellStock(companyId) {
 }
 
 function handleTakeLoan(amount) {
+  if (blockReviewedTransaction()) return;
   const result = borrowBankLoan({
     economyState,
     amount,
@@ -6619,6 +6776,7 @@ function handleTakeLoan(amount) {
 }
 
 function handlePhoneBankLoan() {
+  if (blockReviewedTransaction()) return;
   const result = borrowQuickLoan({
     economyState,
     config: DANFO_ECONOMY_CONFIG,
@@ -6631,6 +6789,7 @@ function handlePhoneBankLoan() {
 }
 
 function handleFuelPurchase(payload) {
+  if (blockReviewedTransaction()) return;
   const requestedLitres = typeof payload === "object" ? payload.requestedLitres : payload;
   const useCoupon = Boolean(payload?.useCoupon) && lifeObligationState.discountCoupons > 0;
   const fuelBeforePurchase = hudState.fuel;
@@ -6657,6 +6816,7 @@ function handleFuelPurchase(payload) {
 }
 
 function handleLoanRepayment({ amount, receiver, loanType }) {
+  if (blockReviewedTransaction()) return;
   const result = repayBankLoan({
     economyState,
     amount,
@@ -6999,7 +7159,8 @@ const club=useClub({
 watch(()=>club.modal.value,value=>{if(value){activeServiceModal.value=null;careers.modal.value=null;government.modal.value=false;pressedKeys.clear();player.speed=0;}});
 const government=useGovernment({
  player,day:()=>gameClock.day,money:()=>economyState.money,name:()=>propertyState.playerName,
- ready:()=>!!propertyState.starterHomeId,
+ // Government access belongs to active gameplay, not starter-rental metadata.
+ ready:()=>!props.paused,
  blocked:()=>currentMapId.value!=='mainland'||crimeState.status!=='free'||economyState.gameOver||sleepState.overlayVisible||worldTransition.active||!!careers.state.shift||!!careers.state.lesson,
  pay:(amount,label,type)=>{if(amount>0)creditIncome({economyState,amount,type,label,config:DANFO_ECONOMY_CONFIG});else chargeExpense({economyState,amount:-amount,type:'government-expense',label,config:DANFO_ECONOMY_CONFIG});},
  crime:amount=>{crimeState.score+=amount;},save:()=>saveGame(),
@@ -7012,7 +7173,7 @@ const careers=useCareers({
  vehicle:()=>vehicleState.activeVehicleId,
  report:()=>({crime:crimeState.score,fines:fineState.outstandingAmount}),
  publicPay:(amount,label)=>government.publicWage(amount,label),
- truckBayClear:()=>![...populationState.vehicles,...connection.players].some(p=>Math.abs(p.x-59*120)<150&&Math.abs(p.y+6*120)<270),
+ truckBayClear:()=>![...populationState.vehicles,...connection.players].some(p=>Math.abs(p.x-57*120)<150&&Math.abs(p.y+6*120)<270),
  pay:(amount,label)=>{if(amount>0)creditIncome({economyState,amount,type:'career-income',label,config:DANFO_ECONOMY_CONFIG});else chargeExpense({economyState,amount:-amount,type:'career-expense',label,config:DANFO_ECONOMY_CONFIG});},
  save:()=>saveGame(),
  swap:(id,pose)=>{
@@ -7031,6 +7192,10 @@ watch(()=>connection.presence,status=>{if(status==='In city'){void heist.act();v
 watch(()=>careers.modal.value,value=>{if(value){activeServiceModal.value=null;pressedKeys.clear();}});
 let disposeLocalStudio = () => {};
 onMounted(() => {
+  billboardLastSlotKey = `${realWorldAdDate()}:${realWorldAdSlot()}`;
+  void refreshBillboardAds();
+  billboardRefreshTimer = window.setInterval(() => { void refreshBillboardAds(); }, 10 * 60 * 1000);
+  billboardSlotTimer = window.setInterval(refreshBillboardSlot, 30 * 1000);
   disposeLocalStudio = installLocalStudio({
     online: () => Boolean(getSaveAccount()), player, economy: economyState,
     status: playerStatus, hud: hudState, clock: gameClock, licence: driverLicenceState,
@@ -7085,6 +7250,8 @@ onMounted(() => {
     trafficLightConcreteImage = image;
     invalidateStaticMapCache();
   });
+  loadCanvasImage(sangoSoilUrl,image=>{sangoSoilImage=image;invalidateStaticMapCache();});
+  loadCanvasImage(sangoTreeUrl,image=>{sangoTreeImage=image;invalidateStaticMapCache();});
   loadCanvasImage(dryMudRowUrl, (image) => {
     dryMudRowImage = image;
     invalidateStaticMapCache();
@@ -7160,6 +7327,11 @@ onBeforeUnmount(() => {
   pendingCanvasImages.clear();
   landmarkSprites.clear();
   genericBuildingSprites.clear();
+  billboardAdSprites.clear();
+  if (billboardRefreshTimer !== null) window.clearInterval(billboardRefreshTimer);
+  if (billboardSlotTimer !== null) window.clearInterval(billboardSlotTimer);
+  billboardRefreshTimer = null;
+  billboardSlotTimer = null;
   populationVehicleSprites.clear();
   purchasedVehicleSprites.clear();
   window.clearTimeout(sleepWarmupTimer);
@@ -7209,6 +7381,30 @@ function recordMarketReceipt(event) {
 }
 observeTransactions(economyState, recordMarketReceipt);
 observeTransactions(bankSavingsState, recordMarketReceipt);
+function handlePlayerTransferSent(amount) {
+  if (blockReviewedTransaction()) return;
+  const value = Math.max(0, Math.round(Number(amount) || 0));
+  if (!value || value > economyState.money) return;
+  chargeExpense({ economyState, amount: value, type: "player-transfer", label: "PLAYER TRANSFER SENT", config: DANFO_ECONOMY_CONFIG });
+  saveGame();
+}
+
+function handlePlayerTransferReceived(amount) {
+  if (blockReviewedTransaction()) return;
+  const value = Math.max(0, Math.round(Number(amount) || 0));
+  if (!value) return;
+  creditIncome({ economyState, amount: value, type: "player-transfer", label: "PLAYER TRANSFER RECEIVED", config: DANFO_ECONOMY_CONFIG });
+  saveGame();
+}
+
+function handlePlaceAdPurchased(amount) {
+  if (blockReviewedTransaction()) return;
+  const value = Math.max(0, Math.round(Number(amount) || 0));
+  if (!value || value > economyState.money) return;
+  chargeExpense({ economyState, amount: value, type: "place-ad", label: "PLACEAD BOOKING", config: DANFO_ECONOMY_CONFIG });
+  saveGame();
+}
+
 </script>
 
 <template>
@@ -7614,7 +7810,8 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       :roadside-fuel-cost="roadsideFuelQuote.cost"
       :roadside-fuel-percent="roadsideFuelQuote.deliveredFuelPercent"
       :roadside-fuel-distance="roadsideFuelQuote.distanceTiles"
-      :transactions="bankMessageFeed"
+      :transactions="economyState.transactions"
+      :bank-messages="bankMessageFeed"
       :outstanding-fines="fineState.outstandingAmount"
       :fine-entries="fineState.entries"
       :vehicle-impounded="fineState.vehicleImpounded"
@@ -7705,6 +7902,9 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       @save-game="saveGame"
       @debug-go-coastal-city="handleDebugGoToCoastalCity"
       @debug-start-race="handleDebugStartRace"
+      @player-transfer-sent="handlePlayerTransferSent"
+      @player-transfer-received="handlePlayerTransferReceived"
+      @place-ad-purchased="handlePlaceAdPurchased"
       @clear-saved-state="clearSavedState"
     />
 

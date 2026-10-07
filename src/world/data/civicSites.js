@@ -47,14 +47,14 @@ export const lawmaCompound = {
  id:'ikeja-lawma-compound',name:'Ikeja LGA',worldX:54*GRID_SIZE,worldY:-9*GRID_SIZE,
  width:6*GRID_SIZE,height:9*GRID_SIZE,ground:'#aa783f',blocks:[],busStops:[],barriers:[],
  landmarks:[{id:'lawma-office',label:'LAWMA DEPOT',...gridRect(0,0,2,2),spriteUrl:lawmaOfficeUrl,services:[]}],
- roads:[road('lawma-turning-yard',0,5,6,4),road('lawma-truck-bay',4,1,2,4),road('lawma-office-access',0,2,2,3)],
- publicParkingZones:[{id:'lawma-truck-spawn',label:'WASTE TRUCK',shortLabel:'LAWMA',parkingFront:'south',...gridRect(4,1,2,4)}],
+ roads:[road('lawma-turning-yard',0,5,4,4),road('lawma-truck-bay',2,1,2,4),road('lawma-office-access',0,2,2,3)],
+ publicParkingZones:[{id:'lawma-truck-spawn',label:'WASTE TRUCK',shortLabel:'LAWMA',parkingFront:'south',...gridRect(2,1,2,4)}],
 };
 
 export const governorCompound={
  id:'ikeja-governor-residence',name:'Ikeja LGA',worldX:46*GRID_SIZE,worldY:-4*GRID_SIZE,
- width:2*GRID_SIZE,height:4*GRID_SIZE,ground:'#aa783f',blocks:[],busStops:[],barriers:[],
+ width:3*GRID_SIZE,height:4*GRID_SIZE,ground:'#aa783f',blocks:[],busStops:[],barriers:[],
  landmarks:[{id:'governor-residence',label:'GOVERNOR RESIDENCE',...gridRect(0,0,2,2),spriteUrl:governorHouseUrl,services:[]}],
- roads:[road('governor-forecourt',0,2,2,2)],
- publicParkingZones:[parking('governor-bay','GOV',0,2)],
+ roads:[road('governor-forecourt',0,2,3,2),road('governor-side-parking-access',2,0,1,2)],
+ publicParkingZones:[parking('governor-bay','GOV',2,0)],
 };

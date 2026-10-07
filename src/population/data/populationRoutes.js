@@ -1,6 +1,7 @@
 import { PRIVATE_CITIZEN_1_ROUTE } from "../../traffic/privatecitizen1/data/privateCitizen1Route.js";
-import { GRID_SIZE, NORTHERN_ESTATE_SPAWN_ROW } from "../../world/data/mapConstants.js";
+import { GRID_SIZE } from "../../world/data/mapConstants.js";
 
+import {approachPoints,westInbound,eastInbound,eastOutbound} from '../../world/data/northernApproaches.js';
 const EAST = "east";
 const WEST = "west";
 const NORTH = "north";
@@ -169,10 +170,14 @@ const expresswayAllowedVehicles = [
 
 export const POPULATION_ROUTES = Object.freeze([
   PRIVATE_CITIZEN_1_ROUTE,
+  route('east-community-to-northwest-edge',[
+    twoLaneHorizontal(EDGE_END_COLUMN,7,WEST),twoLaneHorizontal(25.55,7,WEST,{noSmooth:true}),
+    ...approachPoints([[25.55,-68.55],[3.55,-68.55],[3.55,-71]])
+  ],{spawnId:'east-community-gate',destinationSpawnId:'northwest-woodland-gate',flowGroup:'outer-to-city',periodWeights:{daytime:1,'morning-rush':1,'evening-rush':1},weight:1,speedMultiplier:.88}),
   route(
     "north-clinic-to-west-community",
     [
-      oneLaneVertical(18, EDGE_START, SOUTH),
+      ...approachPoints(westInbound),
       oneLaneVertical(18, 6.45, SOUTH),
       point(18.5, 6.95, {
         direction: SOUTH,
@@ -213,7 +218,7 @@ export const POPULATION_ROUTES = Object.freeze([
   route(
     "north-estate-to-west-south-avenue",
     [
-      twoLaneVertical(24, NORTHERN_ESTATE_SPAWN_ROW, SOUTH),
+      ...approachPoints([[2.45,-71],[2.45,-67.45],[24.45,-67.45]]),
       twoLaneVertical(24, -66, SOUTH),
       twoLaneVertical(24, -5, SOUTH),
       twoLaneVertical(24, 5.6, SOUTH),
@@ -248,7 +253,7 @@ export const POPULATION_ROUTES = Object.freeze([
   route(
     "north-office-to-east-community",
     [
-      twoLaneVertical(45, EDGE_START, SOUTH),
+      ...approachPoints([...eastInbound,[45.45,-1.55]]),
       twoLaneVertical(45, 5.6, SOUTH),
       twoLaneVertical(45, 8, SOUTH),
       twoLaneHorizontal(46, 7, EAST),
@@ -275,7 +280,7 @@ export const POPULATION_ROUTES = Object.freeze([
   route(
     "north-highway-to-west-expressway",
     [
-      twoLaneVertical(58, EDGE_START, SOUTH),
+      ...approachPoints(eastInbound),
       twoLaneVertical(58, 10.8, SOUTH),
       point(58.45, 15.75, { direction: SOUTH }),
       point(58.35, 16.15),
@@ -370,7 +375,7 @@ export const POPULATION_ROUTES = Object.freeze([
       twoLaneVertical(58, EDGE_END_ROW, NORTH),
       twoLaneVertical(58, 17.2, NORTH),
       twoLaneVertical(58, 10, NORTH),
-      twoLaneVertical(58, EDGE_START, NORTH),
+      ...approachPoints(eastOutbound),
     ],
     {
       spawnId: "south-highway-gate",
@@ -571,7 +576,7 @@ export const POPULATION_ROUTES = Object.freeze([
   route(
     "freight-north-highway-to-east-expressway",
     [
-      point(58.45, LARGE_VEHICLE_EDGE_START, { direction: SOUTH }),
+      ...approachPoints(eastInbound),
       point(58.45, 18.6, { direction: SOUTH }),
       point(58.7, 19.15, { direction: SOUTH }),
       fourLaneHighway(59.15, EAST, "slow"),
@@ -627,7 +632,7 @@ export const POPULATION_ROUTES = Object.freeze([
       point(59.35, 19.2, { direction: EAST }),
       point(59.55, 18.7, { direction: NORTH }),
       point(59.55, 15.5, { direction: NORTH }),
-      point(59.55, EDGE_START, { direction: NORTH }),
+      ...approachPoints(eastOutbound),
     ],
     {
       spawnId: "west-expressway-gate",

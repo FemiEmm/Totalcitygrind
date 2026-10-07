@@ -143,8 +143,8 @@ Source: `src/world/data/civicSites.js`.
 | --- | --- | --- | --- |
 | Sango Otta School | X39 Y-9 | 2 × 2 | 10 bays: X41–45 Y-8 and X41–45 Y-5 |
 | LASTMA Office | X49 Y-4 | 1 × 2 | L1: X51 Y-3; L2: X52 Y-3 |
-| LAWMA Depot | X54 Y-9 | 2 × 2 | Waste truck bay: X58 Y-8, size 2 × 4; separate turning yard |
-| Governor Residence | X46 Y-4 | 2 × 2 | GOV: X46 Y-2 |
+| LAWMA Depot | X54 Y-9 | 2 × 2 | Waste truck bay: X56 Y-8, size 2 × 4; truck centre X57 Y-6; separate 4 × 4 turning yard at X54 Y-4 |
+| Governor Residence | X46 Y-4 | 2 × 2 | GOV: X48 Y-4; south-facing bay with side access to the forecourt |
 
 ## Workplace parking additions
 
@@ -255,3 +255,19 @@ Updated 2026-10-06; source changes only, not runtime tested.
 - Coast City remains locked.
 
 Sources: `src/danfo/population/usePassengerPopulation.js`, `src/danfo/systems/danfoPassengers.js`, `services/backender/src/economy/transport.js`. Legacy population rules are inactive.
+
+## Northern woodland and AI approaches — 2026-10-07
+
+Code-only change, not runtime verified. Soil covers the former black northern gaps; eligible woodland tiles carry two or three tree sprites. Sango perimeter barriers are removed. Buildings, civic plots, roads and parking remain excluded from tree placement.
+
+New roads use angular turns. West entry X2–3 at Y−69 descends via X8–9 and joins X18 at Y−2; a northern cross-link also serves the existing estate spine. East entry X60–61 at Y−69 turns west at Y−12/−11, north of the LAWMA office, then runs straight south through X58–59 into the mainland. The office branch remains at Y−2. LAWMA parking has moved west to X56–57, Y−8 through Y−5; its turning yard is X54–57, Y−4 through Y−1 and opens onto the straight road. These roads avoid the school and relocated truck bay. Outbound highway traffic exits at the northeast edge; a community route exits at the northwest edge via the estate spine. Existing estate housing access lanes do not carry new through routes. Spawn staging is Y−71, outside visible bounds.
+
+Sources: `src/world/data/northernApproaches.js`, `worldMap.js`, `northernResidential.js`, `src/population/data/populationRoutes.js`. Tree/soil assets: `src/assets/environment/sango-tree-topdown-1x1.png` and `sango-soil-topdown-1x1.png`.
+
+### Governor residence and tree collision — 2026-10-07
+
+The governor residence uses a replacement transparent, fence-free building sprite (`src/assets/buildings/governors-house.png`) on its existing 2 × 2 footprint at X46 Y−4. GOV parking moved to X48 Y−4, with a paved side connection south to the forecourt. Only the new northern woodland trees have added individual trunk collision rectangles; existing decorative trees are unchanged. These obstacles use the existing spatial collision index. Source edits only; not runtime tested.
+
+### Phone map and government parking — 2026-10-07
+
+The client and Backender government interaction now both use GOV parking at X48 Y−4. The phone map catalogue includes Sango Otta School, LASTMA Office, LAWMA Depot and Governor Residence, with navigation targeting their first marked parking bay. Governor house/government are search aliases. All Sango home parking addresses are also searchable. Entries derive coordinates from civic/residential parking definitions, so bay moves update navigation automatically. Sources: `src/motoEazi/data/motoEaziLocations.js`, `src/government/rules.js`, `services/backender/src/government/rules.js`.

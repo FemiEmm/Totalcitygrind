@@ -47,6 +47,10 @@ import {
   setHudPreference,
 } from "../../hud/hudPreferences.js";
 import { playGameSound } from "../../audio/gameAudio.js";
+import { STARTER_HOMES } from "../../property/data/starterHomes.js";
+import { connection, getPlayerMessages, sendPlayerMessage, getPlayerTransfers, sendPlayerTransfer, claimPlayerTransfers, getPlaceAds, bookPlaceAd } from "../../network/connection.js";
+import { BILLBOARDS, PLACE_AD_PRICE, PLACE_AD_SLOT_MINUTES, PLACE_AD_TIME_ZONE, realWorldAdDate, scheduledTimesForBooking } from '../../advertising/billboards.js';
+import { uploadPlaceAdImage } from '../../advertising/placeAdStorage.js';
 
 const PHONE_STATE_STORAGE_KEY = "total-city-grind-phone-v2";
 
@@ -220,6 +224,10 @@ const props = defineProps({
     default: 0,
   },
   transactions: {
+    type: Array,
+    default: () => [],
+  },
+  bankMessages: {
     type: Array,
     default: () => [],
   },
@@ -432,6 +440,23 @@ const props = defineProps({
 
 const equippedPhone = computed(() => PHONES.find(phone => phone.id === props.customizationState.phone));
 const equippedPhoneStyle = computed(() => phoneThemeStyle(equippedPhone.value));
+const currentHomeAddress = computed(() => {
+  if (props.propertyState.activeHomeId === "starter-rental") {
+    const home = STARTER_HOMES.find(item => item.id === props.propertyState.starterHomeId);
+    if (!home) return "No home selected";
+    const street = home.row && home.row !== home.label ? `${home.row}, ` : "";
+    return `${home.name}, ${street}${home.district || "Lagos"}`;
+  }
+  const home = props.propertyCatalogue.find(item => item.id === props.propertyState.activeHomeId);
+  return home ? `${home.name}, ${home.district || "Lagos"}` : "No home selected";
+});
+
+
+const transactionReviewMessage = computed(() =>
+  connection.transactionsLocked
+    ? "Transactions are temporarily unavailable while account activity is being reviewed."
+    : "",
+);
 
 const weekdayLabel = computed(() => {
   const weekdays = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -485,6 +510,9 @@ const emit = defineEmits([
   "list-property-rental",
   "remove-property-rental",
   "resolve-late-rent",
+  "player-transfer-sent",
+  "player-transfer-received",
+  "place-ad-purchased",
 ]);
 
 function loadSavedPhoneState() {
@@ -522,6 +550,27 @@ let ringTimeout = null;
 const transferAmount = ref("");
 const rentalAmounts = ref({});
 const transferReceiver = ref("");
+const playerMessages = ref([]);
+const playerTransfers = ref([]);
+const socialBusy = ref(false);
+const socialError = ref("");
+const showNewMessageComposer = ref(false);
+const newMessageUsername = ref("");
+const newMessageText = ref("");
+const threadReplyText = ref("");
+const playerTransferUsername = ref("");
+const playerTransferAmount = ref("");
+const transferFeedback = ref("");
+const placeAdBillboardId = ref(BILLBOARDS[0]?.id || "billboard-01");
+const placeAdDate = ref(realWorldAdDate());
+const placeAdImageDataUrl = ref("");
+const placeAdFile = ref(null);
+const placeAdFileName = ref("");
+const placeAdBookings = ref([]);
+const placeAdBusy = ref(false);
+const placeAdFeedback = ref("");
+const placeAdSchedule = ref([]);
+let messageRefreshTimer = null;
 const loanRepaymentType = ref("quick");
 const megapayPaymentTarget = ref("");
 const megapayPaymentAmount = ref("");
@@ -550,13 +599,33 @@ let saveAcknowledgedTimer = null;
 const activeMessageContactId = ref(null);
 const activeAppId = ref(null);
 const debuggerUnlocked = ref(false);
+const debugUnlockVisible = ref(false);
+const debugUnlockPassword = ref("");
+const debugUnlockError = ref("");
 const DEBUGGER_PASSWORD = "ADMINDEBUG";
 const DEBUGGER_TAP_TARGET = 5;
 let debuggerTapCount = 0;
 let debuggerTapResetTimer = null;
 
+function closeDebugUnlock() {
+  debugUnlockVisible.value = false;
+  debugUnlockPassword.value = "";
+  debugUnlockError.value = "";
+}
+
+function submitDebugUnlock() {
+  if (debugUnlockPassword.value === DEBUGGER_PASSWORD) {
+    debuggerUnlocked.value = true;
+    activeAppId.value = null;
+    closeDebugUnlock();
+    return;
+  }
+  debugUnlockError.value = "Incorrect password.";
+  debugUnlockPassword.value = "";
+}
+
 function handleDebugUnlockTap() {
-  if (debuggerUnlocked.value) return;
+  if (debuggerUnlocked.value || debugUnlockVisible.value) return;
   debuggerTapCount += 1;
   window.clearTimeout(debuggerTapResetTimer);
   debuggerTapResetTimer = window.setTimeout(() => {
@@ -565,13 +634,9 @@ function handleDebugUnlockTap() {
   if (debuggerTapCount < DEBUGGER_TAP_TARGET) return;
   debuggerTapCount = 0;
   window.clearTimeout(debuggerTapResetTimer);
-  const password = window.prompt("Admin debug password");
-  if (password === DEBUGGER_PASSWORD) {
-    debuggerUnlocked.value = true;
-    activeAppId.value = null;
-    return;
-  }
-  if (password !== null) window.alert("Incorrect debug password.");
+  debugUnlockPassword.value = "";
+  debugUnlockError.value = "";
+  debugUnlockVisible.value = true;
 }
 
 const mutiuReply = ref(
@@ -590,6 +655,24 @@ const displayedCall = computed(() => {
 
 const launcherApps = computed(() => {
   return PHONE_APPS.filter((app) => !app.hidden && (app.id !== "debugger" || debuggerUnlocked.value));
+});
+const currentUsername = computed(() => connection.user?.user_metadata?.username || "");
+const activePlayerThreadUsername = computed(() => activeMessageContactId.value?.startsWith("player:") ? activeMessageContactId.value.slice(7) : "");
+const activePlayerThreadMessages = computed(() => playerMessages.value.filter(message => {
+  if (!activePlayerThreadUsername.value) return false;
+  const other = message.senderId === connection.user?.id ? message.recipientUsername : message.senderUsername;
+  return other?.toLowerCase() === activePlayerThreadUsername.value.toLowerCase();
+}));
+const playerMessageThreads = computed(() => {
+  const map = new Map();
+  for (const message of playerMessages.value) {
+    const sentByMe = message.senderId === connection.user?.id;
+    const username = sentByMe ? message.recipientUsername : message.senderUsername;
+    if (!username) continue;
+    const existing = map.get(username.toLowerCase());
+    if (!existing || message.createdAt > existing.createdAt) map.set(username.toLowerCase(), { username, text: message.text, createdAt: message.createdAt });
+  }
+  return [...map.values()].sort((a,b)=>b.createdAt-a.createdAt);
 });
 
 const orderedPhoneContacts = computed(() => {
@@ -614,6 +697,7 @@ const appHeaderTitle = computed(() => {
   if (activeAppId.value === "bpc") return "Big People Club";
   if (activeAppId.value === "messages" && activeMessageContactId.value === "government") return "Government";
   if (activeAppId.value === "messages" && activeMessageContactId.value === "stock-adviser") return "Stock Adviser";
+  if (activeAppId.value === "messages" && activePlayerThreadUsername.value) return `@${activePlayerThreadUsername.value}`;
   if (activeAppId.value === "messages" && activeMessageContactId.value) {
     return PHONE_CONTACTS.find((contact) => {
       return contact.id === activeMessageContactId.value;
@@ -763,7 +847,7 @@ const notificationCount = computed(() => {
   );
 });
 
-const bankMessages = computed(() => props.transactions);
+const bankMessages = computed(() => props.bankMessages);
 const hasMessagesAppAttention = computed(() => {
   return props.governmentUnread > 0 || adviserUnreadCount.value > 0 || hasUnreadMessage.value || hasUnreadBankMessage.value;
 });
@@ -857,6 +941,7 @@ const locationMatches = computed(() => {
     .filter((location) => {
       return (
         location.label.toLowerCase().includes(query) ||
+        (location.searchAliases || "").toLowerCase().includes(query) ||
         location.districtName.toLowerCase().includes(query)
       );
     })
@@ -994,6 +1079,7 @@ onBeforeUnmount(() => {
   window.clearTimeout(notificationShakeTimer);
   window.clearTimeout(saveAcknowledgedTimer);
   window.clearTimeout(debuggerTapResetTimer);
+  window.clearInterval(messageRefreshTimer);
 });
 
 function requestGameSave() {
@@ -1058,13 +1144,13 @@ watch(
 );
 
 watch(
-  () => props.transactions[0]?.id,
+  () => props.bankMessages[0]?.id,
   (transactionId, previousTransactionId) => {
     if (!transactionId || transactionId === previousTransactionId) {
       return;
     }
 
-    const latestTransaction = props.transactions[0];
+    const latestTransaction = props.bankMessages[0];
 
     hasUnreadBankMessage.value = true;
     triggerPhoneNotification();
@@ -1121,6 +1207,21 @@ watch(
   },
 );
 
+watch(activeAppId, (appId) => {
+  window.clearInterval(messageRefreshTimer);
+  messageRefreshTimer = null;
+  if (appId === "messages" && connection.user?.id) {
+    void refreshPlayerMessages();
+    messageRefreshTimer = window.setInterval(() => { void refreshPlayerMessages(); }, 15000);
+  }
+  if (appId === "wallet" && connection.user?.id) void refreshPlayerTransfers(true);
+  if (appId === "place-ad") void refreshPlaceAds();
+});
+
+watch(() => connection.user?.id, (userId) => {
+  if (userId) void refreshPlayerTransfers(true);
+}, { immediate: true });
+
 watch(
   isOpen,
   (open) => {
@@ -1158,6 +1259,13 @@ function openApp(appId) {
 
   if (appId === "wallet") {
     hasUnreadBankMessage.value = false;
+    void refreshPlayerTransfers(true);
+  }
+  if (appId === "messages") {
+    void refreshPlayerMessages();
+  }
+  if (appId === "place-ad") {
+    void refreshPlaceAds();
   }
 
   if (appId === "moto-eazi") {
@@ -1317,6 +1425,7 @@ function callMutiu() {
 }
 
 function submitMegapayPayment() {
+  if (connection.transactionsLocked) { transferFeedback.value = transactionReviewMessage.value; return; }
   const option = selectedMegapayPayment.value;
   const amount = Math.max(0, Math.round(Number(megapayPaymentAmount.value) || 0));
   if (!option || amount <= 0 || amount > option.amount || amount > props.money) return;
@@ -1337,7 +1446,149 @@ function submitMegapayPayment() {
   megapayPaymentTarget.value = "";
 }
 
+async function refreshPlayerMessages() {
+  if (!connection.user?.id) return;
+  try {
+    const result = await getPlayerMessages();
+    playerMessages.value = Array.isArray(result?.messages) ? result.messages : [];
+    socialError.value = "";
+  } catch (error) {
+    socialError.value = error.message || "Messages are unavailable.";
+  }
+}
+
+async function submitNewPlayerMessage() {
+  const username = newMessageUsername.value.trim().replace(/^@/, "");
+  const text = newMessageText.value.trim();
+  if (!username || !text || socialBusy.value) return;
+  socialBusy.value = true; socialError.value = "";
+  try {
+    await sendPlayerMessage(username, text);
+    newMessageUsername.value = ""; newMessageText.value = ""; showNewMessageComposer.value = false;
+    await refreshPlayerMessages();
+    activeMessageContactId.value = `player:${username}`;
+  } catch (error) { socialError.value = error.message || "Message could not be sent."; }
+  finally { socialBusy.value = false; }
+}
+
+async function submitThreadReply() {
+  const username = activePlayerThreadUsername.value;
+  const text = threadReplyText.value.trim();
+  if (!username || !text || socialBusy.value) return;
+  socialBusy.value = true; socialError.value = "";
+  try { await sendPlayerMessage(username, text); threadReplyText.value = ""; await refreshPlayerMessages(); }
+  catch (error) { socialError.value = error.message || "Message could not be sent."; }
+  finally { socialBusy.value = false; }
+}
+
+function openPlayerThread(username) {
+  activeMessageContactId.value = `player:${username}`;
+  void refreshPlayerMessages();
+}
+
+async function refreshPlayerTransfers(claimIncoming = false) {
+  if (!connection.user?.id) return;
+  try {
+    const result = await getPlayerTransfers();
+    playerTransfers.value = Array.isArray(result?.transfers) ? result.transfers : [];
+    if (claimIncoming && !connection.transactionsLocked && playerTransfers.value.some(row => row.recipientId === connection.user.id && !row.claimedAt)) {
+      const claimed = await claimPlayerTransfers();
+      if (claimed?.total > 0) emit("player-transfer-received", claimed.total);
+      const refreshed = await getPlayerTransfers();
+      playerTransfers.value = Array.isArray(refreshed?.transfers) ? refreshed.transfers : [];
+    }
+  } catch (error) { transferFeedback.value = error.message || "Transfers are unavailable."; }
+}
+
+async function submitPlayerTransfer() {
+  if (connection.transactionsLocked) { transferFeedback.value = transactionReviewMessage.value; return; }
+  const username = playerTransferUsername.value.trim().replace(/^@/, "");
+  const amount = Math.round(Number(playerTransferAmount.value) || 0);
+  if (!username || amount <= 0 || amount > props.money || socialBusy.value) return;
+  socialBusy.value = true; transferFeedback.value = "";
+  try {
+    await sendPlayerTransfer(username, amount, Math.round(props.money));
+    emit("player-transfer-sent", amount);
+    transferFeedback.value = `${formatMoney(amount)} sent to @${username}.`;
+    playerTransferUsername.value = ""; playerTransferAmount.value = "";
+    await refreshPlayerTransfers(false);
+  } catch (error) { transferFeedback.value = error.message || "Transfer could not be sent."; }
+  finally { socialBusy.value = false; }
+}
+
+async function refreshPlaceAds() {
+  try {
+    const result = await getPlaceAds(placeAdDate.value || realWorldAdDate());
+    placeAdBookings.value = Array.isArray(result?.ads) ? result.ads : [];
+  } catch (error) {
+    placeAdFeedback.value = error.message || "Ad schedule is unavailable.";
+  }
+}
+
+function handlePlaceAdImage(event) {
+  const file = event?.target?.files?.[0];
+  placeAdFeedback.value = "";
+  placeAdSchedule.value = [];
+  if (!file) { placeAdImageDataUrl.value = ""; placeAdFile.value = null; placeAdFileName.value = ""; return; }
+  if (!['image/png','image/jpeg','image/webp'].includes(file.type)) {
+    placeAdFeedback.value = 'Use a PNG, JPG or WebP image.';
+    placeAdFile.value = null;
+    event.target.value = '';
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    placeAdFeedback.value = 'Ad image must be 2 MB or smaller.';
+    placeAdFile.value = null;
+    event.target.value = '';
+    return;
+  }
+  placeAdFile.value = file;
+  const reader = new FileReader();
+  reader.addEventListener('load', () => { placeAdImageDataUrl.value = String(reader.result || ''); placeAdFileName.value = file.name; });
+  reader.addEventListener('error', () => { placeAdFeedback.value = 'Could not read that image.'; });
+  reader.readAsDataURL(file);
+}
+
+async function submitPlaceAd() {
+  if (connection.transactionsLocked) { placeAdFeedback.value = transactionReviewMessage.value; return; }
+  if (placeAdBusy.value || !placeAdFile.value || props.money < PLACE_AD_PRICE) return;
+  if (!connection.user?.id) { placeAdFeedback.value = 'Sign in before booking an ad.'; return; }
+  const duplicate = placeAdBookings.value.some((booking) =>
+    booking.billboardId === placeAdBillboardId.value &&
+    booking.bookingDate === placeAdDate.value &&
+    booking.playerId === connection.user.id
+  );
+  if (duplicate) { placeAdFeedback.value = 'You already booked this billboard for this date.'; return; }
+  placeAdBusy.value = true; placeAdFeedback.value = ''; placeAdSchedule.value = [];
+  try {
+    const uploaded = await uploadPlaceAdImage({
+      file: placeAdFile.value,
+      playerId: connection.user.id,
+      billboardId: placeAdBillboardId.value,
+      bookingDate: placeAdDate.value,
+    });
+    const result = await bookPlaceAd({
+      billboardId: placeAdBillboardId.value,
+      bookingDate: placeAdDate.value,
+      imagePath: uploaded.imagePath,
+      availableBalance: Math.round(props.money),
+    });
+    emit('place-ad-purchased', PLACE_AD_PRICE);
+    await refreshPlaceAds();
+    const sameBillboard = placeAdBookings.value.filter((booking) => booking.billboardId === placeAdBillboardId.value);
+    placeAdSchedule.value = scheduledTimesForBooking(sameBillboard, result.booking?.id);
+    const label = BILLBOARDS.find((billboard) => billboard.id === placeAdBillboardId.value)?.label || 'Billboard';
+    placeAdFeedback.value = `${label} booked for ${placeAdDate.value}. Your ad runs for ${PLACE_AD_SLOT_MINUTES} minutes each turn and rotates throughout the real-world day.`;
+    placeAdImageDataUrl.value = '';
+    placeAdFile.value = null;
+    placeAdFileName.value = '';
+  } catch (error) {
+    placeAdFeedback.value = error.message || 'Ad could not be booked.';
+  } finally { placeAdBusy.value = false; }
+}
+
 function repayLoan() {
+  if (connection.transactionsLocked) { transferFeedback.value = transactionReviewMessage.value; return; }
   const selectedLoanType =
     loanRepaymentType.value === "bank" && props.largeLoanBalance > 0
       ? "bank"
@@ -1429,6 +1680,50 @@ function repayLoan() {
             <i class="fa-solid fa-battery-three-quarters" />
           </span>
         </header>
+
+        <div v-if="connection.transactionsLocked" class="game-phone__review-lock" role="status">
+          <i class="fa-solid fa-lock" aria-hidden="true" />
+          <span>{{ transactionReviewMessage }}</span>
+        </div>
+
+        <div
+          v-if="debugUnlockVisible"
+          class="game-phone__debug-unlock-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="debug-unlock-title"
+        >
+          <form class="game-phone__debug-unlock-card" @submit.prevent="submitDebugUnlock">
+            <button
+              class="game-phone__debug-unlock-close"
+              type="button"
+              aria-label="Close debug unlock"
+              @click="closeDebugUnlock"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true" />
+            </button>
+            <span class="game-phone__debug-unlock-icon" aria-hidden="true">
+              <i class="fa-solid fa-shield-halved" />
+            </span>
+            <small>ADMIN ACCESS</small>
+            <strong id="debug-unlock-title">Unlock Debugger</strong>
+            <p>Enter the admin password to show the Debugger app.</p>
+            <label for="debug-unlock-password">Password</label>
+            <input
+              id="debug-unlock-password"
+              v-model="debugUnlockPassword"
+              type="password"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder="Enter password"
+              autofocus
+              @input="debugUnlockError = ''"
+            >
+            <small v-if="debugUnlockError" class="game-phone__debug-unlock-error" role="alert">{{ debugUnlockError }}</small>
+            <button class="game-phone__debug-unlock-submit" type="submit">Unlock</button>
+          </form>
+        </div>
 
         <section
           v-if="displayedCall"
@@ -1587,7 +1882,7 @@ function repayLoan() {
             </button>
           </nav>
 
-          <CareerPanel v-if="activeApp.id === 'me'" :state="careerState" :minute="careerMinute" :occupied="careerOccupied" :busy="careerBusy" :error="careerError" :bars="{health,energy,fuel,damage,intoxication}" @action="$emit('career-action',$event)" />
+          <CareerPanel v-if="activeApp.id === 'me'" :state="careerState" :home-address="currentHomeAddress" :minute="careerMinute" :occupied="careerOccupied" :busy="careerBusy" :error="careerError" :bars="{health,energy,fuel,damage,intoxication}" @action="$emit('career-action',$event)" />
           <HousingApp v-else-if="activeApp.id === 'housing'" :view="housingView" :busy="housingBusy" :error="housingError" @action="$emit('housing-action',$event)" />
           <BigPeopleClub v-else-if="activeApp.id === 'bpc'" :wealth="netWorth" :player-name="playerName" />
           <CustomizeShop
@@ -1836,6 +2131,24 @@ function repayLoan() {
                 <small>Open a conversation to view messages and actions.</small>
               </header>
 
+              <button class="game-phone__call-button" type="button" :disabled="!connection.user?.id" @click="showNewMessageComposer = !showNewMessageComposer">
+                <i class="fa-solid fa-pen" aria-hidden="true" /> NEW MESSAGE
+              </button>
+              <form v-if="showNewMessageComposer" class="game-phone__bank-form" @submit.prevent="submitNewPlayerMessage">
+                <label>Username<input v-model="newMessageUsername" type="text" maxlength="24" placeholder="username" required></label>
+                <label>Message<textarea v-model="newMessageText" maxlength="500" rows="3" placeholder="Type your message" required></textarea></label>
+                <button type="submit" :disabled="socialBusy || !newMessageUsername.trim() || !newMessageText.trim()">{{ socialBusy ? 'SENDING...' : 'SEND' }}</button>
+              </form>
+              <small v-if="socialError" class="game-phone__social-error">{{ socialError }}</small>
+
+              <div v-if="playerMessageThreads.length" class="game-phone__conversation-list game-phone__player-conversations">
+                <button v-for="thread in playerMessageThreads" :key="thread.username" class="game-phone__conversation" type="button" @click="openPlayerThread(thread.username)">
+                  <span class="game-phone__contact-avatar"><i class="fa-solid fa-user" aria-hidden="true" /></span>
+                  <span class="game-phone__conversation-details"><strong>@{{ thread.username }}</strong><small>{{ thread.text }}</small></span>
+                  <i class="fa-solid fa-chevron-right" aria-hidden="true" />
+                </button>
+              </div>
+
               <section class="game-phone__traffic-report">
                 <span class="game-phone__contact-avatar game-phone__contact-avatar--work">
                   <i class="fa-solid fa-truck-pickup" aria-hidden="true" />
@@ -1888,8 +2201,8 @@ function repayLoan() {
                       Owed: {{ formatMoney(loanBalance + largeLoanBalance) }}
                     </small>
                     <small v-else-if="loanOfferReceived">Quick loan offer available</small>
-                    <small v-else-if="bankMessages.length">Latest receipt: {{ bankMessages[0].label }}</small>
-                    <small v-else>Account messages and transaction receipts</small>
+                    <small v-else-if="bankMessages.length">{{ bankMessages[0].label }}</small>
+                    <small v-else>Important account notices</small>
                   </span>
                   <span v-if="hasUnreadBankMessage" class="game-phone__conversation-badge">1</span>
                   <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
@@ -1914,6 +2227,23 @@ function repayLoan() {
                   <i v-else class="fa-solid fa-chevron-right" aria-hidden="true" />
                 </button>
               </div>
+            </template>
+
+            <template v-else-if="activePlayerThreadUsername">
+              <header class="game-phone__messages-heading">
+                <span class="game-phone__eyebrow">PLAYER MESSAGE</span>
+                <strong>@{{ activePlayerThreadUsername }}</strong>
+                <small>{{ activePlayerThreadMessages.length ? 'Conversation history' : 'Start the conversation' }}</small>
+              </header>
+              <div v-for="message in activePlayerThreadMessages" :key="message.id" class="game-phone__message-bubble" :class="{ 'game-phone__message-bubble--sent': message.senderId === connection.user?.id }">
+                {{ message.text }}
+                <time>{{ formatTransactionTime(message.createdAt) }}</time>
+              </div>
+              <form class="game-phone__bank-form" @submit.prevent="submitThreadReply">
+                <label>Message<textarea v-model="threadReplyText" maxlength="500" rows="3" placeholder="Type a reply" required></textarea></label>
+                <button type="submit" :disabled="socialBusy || !threadReplyText.trim()">{{ socialBusy ? 'SENDING...' : 'SEND' }}</button>
+              </form>
+              <small v-if="socialError" class="game-phone__social-error">{{ socialError }}</small>
             </template>
 
             <template v-else-if="activeMessageContactId === 'government' && government"><GovernmentPanel :state="government" :busy="governmentBusy" :error="governmentError" @action="$emit('government-action',$event)" /></template>
@@ -1970,7 +2300,7 @@ function repayLoan() {
               <header class="game-phone__messages-heading">
                 <span class="game-phone__eyebrow">MEGAPAY BANK</span>
                 <strong>Account messages</strong>
-                <small>Savings rates, interest, loans, and receipts</small>
+                <small>Important account notices and loan information</small>
               </header>
 
               <div v-if="loanOfferReceived && loanBalance <= 0" class="game-phone__message-bubble game-phone__message-bubble--bank">
@@ -2848,6 +3178,54 @@ function repayLoan() {
           </div>
 
           <div
+            v-else-if="activeApp.id === 'place-ad'"
+            class="game-phone__place-ad"
+          >
+            <header class="game-phone__messages-heading">
+              <span class="game-phone__eyebrow">PLACEAD</span>
+              <strong>Book a city billboard</strong>
+              <small>{{ formatMoney(PLACE_AD_PRICE) }} per real-world day. Each booked ad gets a 30-minute turn and repeats throughout the day.</small>
+            </header>
+
+            <form class="game-phone__place-ad-form" @submit.prevent="submitPlaceAd">
+              <label>
+                Billboard
+                <select v-model="placeAdBillboardId" required @change="placeAdSchedule = []; refreshPlaceAds()">
+                  <option v-for="billboard in BILLBOARDS" :key="billboard.id" :value="billboard.id">
+                    {{ billboard.label }} · {{ billboard.district }}
+                  </option>
+                </select>
+              </label>
+              <label>
+                Pick a date for ad
+                <input v-model="placeAdDate" type="date" :min="realWorldAdDate()" required @change="placeAdSchedule = []; refreshPlaceAds()">
+              </label>
+              <label class="game-phone__place-ad-upload">
+                Ad image
+                <input type="file" accept="image/png,image/jpeg,image/webp" required @change="handlePlaceAdImage">
+              </label>
+              <small>PNG, JPG or WebP · maximum 2 MB.</small>
+              <div v-if="placeAdImageDataUrl" class="game-phone__place-ad-preview">
+                <img :src="placeAdImageDataUrl" alt="Ad preview">
+                <small>{{ placeAdFileName }}</small>
+              </div>
+              <div class="game-phone__place-ad-price">
+                <span>PRICE</span><strong>{{ formatMoney(PLACE_AD_PRICE) }}</strong>
+              </div>
+              <button type="submit" :disabled="placeAdBusy || !placeAdFile || money < PLACE_AD_PRICE">
+                {{ placeAdBusy ? 'BOOKING...' : 'BOOK AD' }}
+              </button>
+              <small v-if="money < PLACE_AD_PRICE">You need {{ formatMoney(PLACE_AD_PRICE) }} in your current account.</small>
+              <p v-if="placeAdFeedback" class="game-phone__place-ad-feedback">{{ placeAdFeedback }}</p>
+              <div v-if="placeAdSchedule.length" class="game-phone__place-ad-times">
+                <strong>Current rotation times · {{ PLACE_AD_TIME_ZONE }}</strong>
+                <span>{{ placeAdSchedule.join(' · ') }}</span>
+                <small>Times update if more ads are booked for the same billboard and date.</small>
+              </div>
+            </form>
+          </div>
+
+          <div
             v-else-if="activeApp.id === 'wallet'"
             class="game-phone__megapay"
           >
@@ -2867,6 +3245,19 @@ function repayLoan() {
                 Danfo garage fee when used &middot; {{ formatMoney(garageFee) }}
               </small>
             </header>
+
+            <form class="game-phone__megapay-payment" @submit.prevent="submitPlayerTransfer">
+              <header>
+                <span><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true" /> TRANSFER</span>
+                <small>Send money to another player by username.</small>
+              </header>
+              <label>Username<input v-model="playerTransferUsername" type="text" maxlength="24" placeholder="username" required></label>
+              <label>Amount<input v-model="playerTransferAmount" type="number" min="1" :max="money" placeholder="Amount" required></label>
+              <button type="submit" :disabled="socialBusy || !playerTransferUsername.trim() || Number(playerTransferAmount) <= 0 || Number(playerTransferAmount) > money">
+                {{ socialBusy ? 'SENDING...' : `SEND ${formatMoney(Math.max(0, Number(playerTransferAmount) || 0))}` }}
+              </button>
+              <small v-if="transferFeedback">{{ transferFeedback }}</small>
+            </form>
 
             <form class="game-phone__megapay-payment" @submit.prevent="submitMegapayPayment">
               <header>
@@ -2937,6 +3328,17 @@ function repayLoan() {
                 <b>{{ formatMoney(totalSpent) }}</b>
               </span>
             </div>
+
+            <section v-if="playerTransfers.length" class="game-phone__transactions">
+              <strong>Player transfers</strong>
+              <article v-for="transfer in playerTransfers.slice(0, 12)" :key="transfer.id" class="game-phone__transaction">
+                <span class="game-phone__transaction-icon" :class="`game-phone__transaction-icon--${transfer.senderId === connection.user?.id ? 'expense' : 'income'}`">
+                  <i :class="transfer.senderId === connection.user?.id ? 'fa-solid fa-arrow-up' : 'fa-solid fa-arrow-down'" aria-hidden="true" />
+                </span>
+                <span><strong>{{ transfer.senderId === connection.user?.id ? `To @${transfer.recipientUsername}` : `From @${transfer.senderUsername}` }}</strong><small>{{ formatTransactionTime(transfer.createdAt) }}</small></span>
+                <b :class="`game-phone__transaction-amount--${transfer.senderId === connection.user?.id ? 'expense' : 'income'}`">{{ transfer.senderId === connection.user?.id ? '-' : '+' }}{{ formatMoney(transfer.amount) }}</b>
+              </article>
+            </section>
 
             <section class="game-phone__transactions">
               <strong>Recent activity</strong>
@@ -3793,6 +4195,7 @@ function repayLoan() {
 }
 
 .game-phone__screen {
+  position: relative;
   height: 430px;
   overflow: hidden;
   border: 1px solid #050607;
@@ -3800,6 +4203,54 @@ function repayLoan() {
   background: #f1f5f8;
   color: #17202a;
 }
+
+.game-phone__debug-unlock-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(7 9 11 / 78%);
+  backdrop-filter: blur(5px);
+}
+
+.game-phone__debug-unlock-card {
+  position: relative;
+  display: grid;
+  gap: 9px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 16px 16px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 20px;
+  background: #111820;
+  color: #f8fafc;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 45%);
+}
+
+.game-phone__debug-unlock-card > small { color: #93a4b8; font-size: 10px; font-weight: 900; letter-spacing: .14em; }
+.game-phone__debug-unlock-card > strong { font-size: 21px; line-height: 1.1; }
+.game-phone__debug-unlock-card > p { margin: 0 0 4px; color: #cbd5e1; font-size: 12px; line-height: 1.4; }
+.game-phone__debug-unlock-card > label { color: #dbe4ef; font-size: 11px; font-weight: 800; }
+.game-phone__debug-unlock-card > input {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid #3d4b5f;
+  border-radius: 11px;
+  outline: none;
+  background: #0b1118;
+  color: #fff;
+  font: inherit;
+  font-size: 16px;
+}
+.game-phone__debug-unlock-card > input:focus { border-color: #f4c542; box-shadow: 0 0 0 2px rgb(244 197 66 / 20%); }
+.game-phone__debug-unlock-icon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 12px; background: #f4c542; color: #111820; font-size: 17px; }
+.game-phone__debug-unlock-close { position: absolute; top: 10px; right: 10px; display: grid; width: 34px; height: 34px; place-items: center; border: 0; border-radius: 50%; background: #263241; color: #fff; }
+.game-phone__debug-unlock-submit { min-height: 44px; margin-top: 3px; border: 0; border-radius: 11px; background: #f4c542; color: #111820; font: inherit; font-weight: 900; }
+.game-phone__debug-unlock-error { color: #ff8f96 !important; letter-spacing: 0 !important; }
 
 .game-phone__status-bar {
   display: flex;
@@ -5278,7 +5729,8 @@ function repayLoan() {
 }
 
 .game-phone__megapay-payment select,
-.game-phone__megapay-payment input {
+.game-phone__megapay-payment input,
+.game-phone__megapay-payment textarea {
   width: 100%;
   min-height: 36px;
   box-sizing: border-box;
@@ -5813,6 +6265,91 @@ function repayLoan() {
 .game-phone__market-explanation { margin: 0; font-size: 12px; line-height: 1.5; }
 .game-phone__stock-card { min-width: 0; overflow-wrap: anywhere; }
 .game-phone__stock-actions button { white-space: normal; min-width: 0; }
+
+.game-phone__bank-form textarea { width:100%; box-sizing:border-box; resize:vertical; min-height:72px; font:inherit; }
+.game-phone__social-error { display:block; margin:8px 0; color:#b42318; font-weight:700; }
+.game-phone__player-conversations { margin:10px 0; }
+.game-phone__message-bubble--sent { margin-left:18px; background:#dff7e8; }
+.game-phone__place-ad {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.game-phone__place-ad-form {
+  display: grid;
+  gap: 12px;
+}
+.game-phone__place-ad-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.game-phone__place-ad-form input,
+.game-phone__place-ad-form select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgb(17 24 39 / 18%);
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+  color: #111827;
+  font: inherit;
+}
+.game-phone__place-ad-form button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  font-weight: 800;
+}
+.game-phone__place-ad-form button:disabled { opacity: .45; }
+.game-phone__place-ad-preview {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgb(17 24 39 / 18%);
+  border-radius: 10px;
+  background: #fff;
+}
+.game-phone__place-ad-preview img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  background: #fff;
+  border: 2px solid #111;
+}
+.game-phone__place-ad-price,
+.game-phone__place-ad-times {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgb(17 24 39 / 6%);
+}
+.game-phone__place-ad-price {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+.game-phone__place-ad-feedback { margin: 0; font-size: 12px; line-height: 1.4; }
+.game-phone__place-ad-times span { font-size: 12px; line-height: 1.5; }
+
+
+.game-phone__review-lock {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.35rem 0.55rem 0;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid currentColor;
+  border-radius: 0.55rem;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
 </style>
 
 

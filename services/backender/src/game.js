@@ -84,10 +84,13 @@ function dispatchGameState(input) {
         for(const npc of db.passengers.npcs)if(npc.vehicle===playerId){npc.vehicle=null;npc.stop=session?.lastStop||npc.stop;npc.destination=null;npc.readyAt=minute+120;npc.fare=0;}
         delete db.passengers.sessions[playerId];
       }
+      if(Array.isArray(db.directMessages))db.directMessages=db.directMessages.filter(row=>row.senderId!==playerId&&row.recipientId!==playerId);
+      if(Array.isArray(db.playerTransfers))db.playerTransfers=db.playerTransfers.filter(row=>row.senderId!==playerId&&row.recipientId!==playerId);
       delete db.users[playerId];
       delete db.profiles[playerId];
       if (db.gameStates) delete db.gameStates[playerId];
       if(db.wallets)delete db.wallets[playerId];
+      if(db.antiCheat)delete db.antiCheat[playerId];
       for (const [key, session] of Object.entries(db.sessions)) if (session.userId === playerId) delete db.sessions[key];
       for (const section of ['homes', 'policeBays']) {
         for (const [key, row] of Object.entries(db[section] || {})) if (row.playerId === playerId) delete db[section][key];

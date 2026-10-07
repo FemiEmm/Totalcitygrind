@@ -1,3 +1,4 @@
+import { isTransactionLocked } from '../../security/transactionLock.js';
 import { BUSINESS_CONFIG } from "../data/businessAssets.js";
 
 export function createBusinessState(startingDay = 1) {
@@ -36,6 +37,7 @@ export function purchaseBusinessOffice({
   currentDay,
   ownedPropertyIds,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0 };
   if (
     state.officeOwned ||
     money < BUSINESS_CONFIG.officePrice ||
@@ -53,6 +55,7 @@ export function purchaseBusinessOffice({
 }
 
 export function purchaseBusinessAsset({ state, assetId, money }) {
+  if (isTransactionLocked()) return { success: false, amount: 0, asset: null };
   const asset = BUSINESS_CONFIG.assets.find((item) => item.id === assetId);
   const owned = state.assetCounts[assetId] ?? 0;
   if (

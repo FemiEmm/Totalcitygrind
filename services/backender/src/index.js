@@ -1,8 +1,12 @@
 import './production.js';
 import { gameState } from './game.js';
 import {createServer} from 'node:http';
+import {randomUUID} from 'node:crypto';
 import {read,transaction,withStoreRequest,initializeStore,closeStore,storageDriver} from './store.js';
 import {ApiError,signup,login,refresh,authenticate,logout,publicUser,displayName} from './auth.js';
+import {listMessages,createMessage,listTransfers,createTransfer,claimTransfers,listPlaceAds,hasPlaceAdBooking,createPlaceAd} from './socialStore.js';
+import {BILLBOARD_IDS,PLACE_AD_PRICE,realWorldAdDate,validateBookingDate,validateImagePath} from './placeAds.js';
+import {antiCheatStatus,checkReportedBalance,assertTransactionsAllowed} from './antiCheat.js';
 const anon=process.env.ANON_KEY,service=process.env.SERVICE_ROLE_KEY;
 if(!anon||!service||anon===service) throw new Error('Distinct ANON_KEY and SERVICE_ROLE_KEY are required');
 const origins=(process.env.CLIENT_ORIGINS||'http://localhost:5173').split(',').map(s=>s.trim());
@@ -63,9 +67,88 @@ async function handleRequest(req,res){
     }
     if(url.pathname==='/auth/v1/user'&&req.method==='GET') return send(res,200,publicUser(authenticate(token)));
     if(url.pathname==='/auth/v1/logout'&&req.method==='POST') {logout(token,url.searchParams.get('scope')||'global');return send(res,204);}
+    if(url.pathname==='/api/anti-cheat/status' && req.method==='GET') {
+      const user=authenticate(token);
+      return send(res,200,await antiCheatStatus(user.id));
+    }
+    if(url.pathname==='/api/anti-cheat/check-balance' && req.method==='POST') {
+      const user=authenticate(token);
+      const input=await body(req);
+      return send(res,200,await checkReportedBalance(user.id,input.currentBalance,'frontend'));
+    }
+    if(url.pathname==='/public/place-ads' && req.method==='GET') {
+      const date=String(url.searchParams.get('date')||realWorldAdDate());
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new ApiError(400,'Invalid ad date');
+      const ads=await listPlaceAds(date);
+      return send(res,200,{date,ads,slotMinutes:30,timeZone:'Africa/Lagos'});
+    }
+    if(url.pathname==='/api/messages' && ['GET','POST'].includes(req.method)) {
+      const user=authenticate(token);
+      if(req.method==='GET') return send(res,200,{messages:await listMessages(user.id)});
+      const input=await body(req);
+      const recipientUsername=String(input.recipientUsername||'').trim().replace(/^@/,'');
+      const text=String(input.text||'').trim();
+      if(!/^[a-zA-Z0-9_]{3,24}$/.test(recipientUsername))throw new ApiError(400,'Enter a valid username');
+      if(!text||text.length>500)throw new ApiError(400,'Messages must be 1–500 characters');
+      const users=read('users');
+      const recipient=Object.values(users).find(row=>(row.username||'').toLowerCase()===recipientUsername.toLowerCase());
+      if(!recipient)throw new ApiError(404,'Username not found','username_not_found');
+      if(recipient.id===user.id)throw new ApiError(400,'Choose another player');
+      const message=await createMessage({id:randomUUID(),senderId:user.id,senderUsername:user.username,recipientId:recipient.id,recipientUsername:recipient.username,text,createdAt:Date.now()});
+      return send(res,201,{message});
+    }
+    if(url.pathname==='/api/transfers' && ['GET','POST'].includes(req.method)) {
+      const user=authenticate(token);
+      if(req.method==='GET') return send(res,200,{transfers:await listTransfers(user.id)});
+      await assertTransactionsAllowed(user.id);
+      const input=await body(req);
+      const recipientUsername=String(input.recipientUsername||'').trim().replace(/^@/,'');
+      const amount=Math.round(Number(input.amount)||0);
+      const availableBalance=Math.round(Number(input.availableBalance)||0);
+      if(!/^[a-zA-Z0-9_]{3,24}$/.test(recipientUsername))throw new ApiError(400,'Enter a valid username');
+      if(!Number.isSafeInteger(amount)||amount<=0||amount>1e12)throw new ApiError(400,'Enter a valid transfer amount');
+      if(!Number.isSafeInteger(availableBalance)||availableBalance<amount)throw new ApiError(400,'Insufficient funds');
+      const users=read('users');
+      const recipient=Object.values(users).find(row=>(row.username||'').toLowerCase()===recipientUsername.toLowerCase());
+      if(!recipient)throw new ApiError(404,'Username not found','username_not_found');
+      if(recipient.id===user.id)throw new ApiError(400,'Choose another player');
+      const transfer=await createTransfer({id:randomUUID(),senderId:user.id,senderUsername:user.username,recipientId:recipient.id,recipientUsername:recipient.username,amount,createdAt:Date.now(),claimedAt:null});
+      return send(res,201,{transfer});
+    }
+    if(url.pathname==='/api/transfers/claim' && req.method==='POST') {
+      const user=authenticate(token);
+      await assertTransactionsAllowed(user.id);
+      const claimed=await claimTransfers(user.id);
+      return send(res,200,{claimed,total:claimed.reduce((sum,row)=>sum+row.amount,0)});
+    }
+    if(url.pathname==='/api/place-ads' && req.method==='POST') {
+      const user=authenticate(token);
+      await assertTransactionsAllowed(user.id);
+      const input=await body(req);
+      const billboardId=String(input.billboardId||'');
+      if(!BILLBOARD_IDS.has(billboardId))throw new ApiError(400,'Choose a valid billboard');
+      const bookingDate=validateBookingDate(input.bookingDate);
+      const availableBalance=Math.round(Number(input.availableBalance)||0);
+      if(!Number.isSafeInteger(availableBalance)||availableBalance<PLACE_AD_PRICE)throw new ApiError(400,'You need ₦10,000 to place this ad');
+      if(await hasPlaceAdBooking(user.id,billboardId,bookingDate))throw new ApiError(409,'You already booked this billboard for this date','duplicate_booking');
+      const imagePath=validateImagePath(input.imagePath,{playerId:user.id,billboardId,bookingDate});
+      try {
+        const booking=await createPlaceAd({id:randomUUID(),billboardId,playerId:user.id,username:user.username,bookingDate,imagePath,amountPaid:PLACE_AD_PRICE,createdAt:Date.now()});
+        const ads=await listPlaceAds(bookingDate);
+        const sameBillboard=ads.filter(row=>row.billboardId===billboardId);
+        const position=Math.max(0,sameBillboard.findIndex(row=>row.id===booking.id));
+        return send(res,201,{booking,price:PLACE_AD_PRICE,totalBookings:sameBillboard.length,position,slotMinutes:30,timeZone:'Africa/Lagos'});
+      } catch(error) {
+        if(error?.code==='23505'||error?.code==='PLACE_AD_DUPLICATE')throw new ApiError(409,'You already booked this billboard for this date','duplicate_booking');
+        if(error?.status===400)throw new ApiError(400,error.message);
+        throw error;
+      }
+    }
     if(url.pathname==='/rest/v1/rpc/game_state' && req.method==='POST') {
       if(key!==service || token!==service) throw new ApiError(403,'Game server access required');
-      return send(res,200,gameState(await body(req, 2 * 1024 * 1024)));
+      const gameInput=await body(req, 2 * 1024 * 1024);
+      if(['economy','housing','career','government','club','heist'].includes(gameInput.action)) await assertTransactionsAllowed(gameInput.playerId);
+      return send(res,200,gameState(gameInput));
     }
     if(url.pathname==='/rest/v1/profiles') {
       for(const key of url.searchParams.keys()) if(!['id','select'].includes(key)) throw new ApiError(400,'Unsupported query parameter');
@@ -93,9 +176,9 @@ const server=createServer(async(req,res)=>{
     const origin=req.headers.origin;
     if(origin&&!origins.includes(origin))throw new ApiError(403,'Origin not allowed');
     if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
-    if(['POST','PATCH'].includes(req.method))await body(req,req.url==='/rest/v1/rpc/game_state'?2*1024*1024:32768);
+    if(['POST','PATCH'].includes(req.method)){const max=req.url==='/rest/v1/rpc/game_state'?2*1024*1024:32768;await body(req,max);}
     // Health and preflight do not acquire the game-state lock.
-    const bypass=req.method==='OPTIONS'||(req.method==='GET'&&req.url==='/health');
+    const bypass=req.method==='OPTIONS'||(req.method==='GET'&&(req.url==='/health'||req.url?.startsWith('/public/place-ads')));
     const result=await (bypass?handleRequest(req,res):withStoreRequest(()=>handleRequest(req,res)));
     res.writeHead(result.status);res.end(result.status===204?undefined:JSON.stringify(result.data));
   }catch(error){

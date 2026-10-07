@@ -1,4 +1,5 @@
 import { STOCK_COMPANIES, STOCK_ADVISER_PRICE, STOCK_ADVISER_DAYS } from '../data/stockMarket.js';
+import { isTransactionLocked } from '../../security/transactionLock.js';
 const company = id => STOCK_COMPANIES.find(c => c.id === id);
 const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
@@ -87,6 +88,7 @@ function adviserMessage(state,day,text) {
   state.adviser.messages=state.adviser.messages.slice(-60);
 }
 export function subscribeStockAdviser(state,day,money) {
+  if (isTransactionLocked()) return null;
   const current=dayNumber(day);
   if (state.adviser.untilDay > current) {
     if (state.adviser.autoRenew) return null;
@@ -153,11 +155,13 @@ export function getStockMarketView(state) {
   });
 }
 export function buyStock(state,id,money) {
+  if (isTransactionLocked()) return null;
   if(!company(id))return null;
   const price=state.prices[id];if(!Number.isFinite(money)||money<price)return null;
   state.holdings[id]++;state.investedPrincipal[id]+=price;return price;
 }
 export function sellStock(state,id) {
+  if (isTransactionLocked()) return null;
   if(!company(id)||state.holdings[id]<=0)return null;
   const quantity=state.holdings[id],cost=state.investedPrincipal[id]/quantity;
   state.holdings[id]--;state.investedPrincipal[id]=Math.max(0,state.investedPrincipal[id]-cost);

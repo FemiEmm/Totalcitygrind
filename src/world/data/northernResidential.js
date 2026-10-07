@@ -17,16 +17,8 @@ export const northernResidential = {
     road('estate-north-cross-street',21,-67,8,2),
     road('estate-south-cross-street',21,-5,8,2),
   ],
-  // Through-road openings and the school access are gaps in the perimeter.
-  barriers: [
-    { id:'estate-west-boundary', ...rect(11,-68,1,66) },
-    { id:'estate-east-boundary-north', ...rect(38,-68,1,62) },
-    { id:'estate-east-boundary-south', ...rect(38,-4,1,2) },
-    { id:'estate-north-west-boundary', ...rect(11,-68,13,1) },
-    { id:'estate-north-east-boundary', ...rect(26,-68,13,1) },
-    { id:'estate-south-west-boundary', ...rect(11,-3,13,1) },
-    { id:'estate-south-east-boundary', ...rect(26,-3,13,1) },
-  ],
+  // Woodland now meets the estate directly; no perimeter dividing blocks.
+  barriers: [],
 };
 for (const side of ['W','E']) {
   const houseX = side === 'W' ? 14 : 30;

@@ -1,4 +1,5 @@
 import { notifyTransaction, createMarketReceiptId } from './transactionObservers.js';
+import { isTransactionLocked } from '../../security/transactionLock.js';
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
 }
@@ -109,6 +110,7 @@ export function purchasePlayerVehicle({
   atDealership,
   config,
 }) {
+  if (isTransactionLocked()) return { success: false, vehicleId: null };
   if (
     !vehicle ||
     !atDealership ||
@@ -138,6 +140,7 @@ export function purchasePlayerVehicle({
 }
 
 export function addMotoEaziFare(economyState, amount) {
+  if (isTransactionLocked()) return 0;
   const fare = Math.max(0, Math.round(amount));
   economyState.money += fare;
 
@@ -159,6 +162,7 @@ export function creditIncome({
   config,
   optimistic = false,
 }) {
+  if (isTransactionLocked()) return null;
   const income = Math.max(0, Math.round(amount));
 
   if (income <= 0) {
@@ -187,6 +191,7 @@ export function chargeExpense({
   config,
   optimistic = false,
 }) {
+  if (isTransactionLocked()) return null;
   const cost = Math.max(0, Math.round(amount));
 
   if (cost <= 0) {
@@ -213,6 +218,7 @@ export function addEmergencyBankLoan({
   amount,
   config,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0 };
   const principal = Math.max(0, Math.ceil(Number(amount) || 0));
 
   if (principal <= 0) {
@@ -274,6 +280,7 @@ export function borrowBankLoan({
   atBank,
   config,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0 };
   const principal = Math.round(Number(amount));
   normaliseLoanState(economyState, config);
 
@@ -319,6 +326,7 @@ export function borrowQuickLoan({
   economyState,
   config,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0 };
   normaliseLoanState(economyState, config);
 
   if (
@@ -363,6 +371,7 @@ export function repayBankLoan({
   loanType = "quick",
   config,
 }) {
+  if (isTransactionLocked()) return { success: false, amount: 0 };
   normaliseLoanState(economyState, config);
   const payment = Math.round(Number(amount));
   const normalisedReceiver = String(receiver ?? "")
@@ -418,6 +427,7 @@ export function repayBankLoan({
 }
 
 export function addPassengerFare(economyState, amount, { optimistic = false } = {}) {
+  if (isTransactionLocked()) return 0;
   const safeAmount = Math.max(0, Math.round(amount));
 
   economyState.money += safeAmount;
@@ -456,6 +466,7 @@ export function processDailyGarageFees({
   currentDay,
   config,
 }) {
+  if (isTransactionLocked()) return null;
   if (economyState.gameOver) {
     return null;
   }
@@ -516,6 +527,7 @@ export function processDailyBrtTax({
   currentDay,
   config,
 }) {
+  if (isTransactionLocked()) return null;
   let latestTransaction = null;
 
   while (economyState.lastProcessedDay < currentDay) {
@@ -581,6 +593,7 @@ export function purchaseFuel({
   config,
   discountRate = 0,
 }) {
+  if (isTransactionLocked()) return { success: false, fuel: currentFuel, cost: 0, litres: 0 };
   const quote = getFuelPurchaseQuote(
     currentFuel,
     requestedLitres,
@@ -669,6 +682,7 @@ export function purchaseRepairs({
   mobileCallout = false,
   discountRate = 0,
 }) {
+  if (isTransactionLocked()) return { success: false, damage: currentDamage, cost: 0 };
   const repairCost = getRepairPurchaseCost(
     currentDamage,
     config,

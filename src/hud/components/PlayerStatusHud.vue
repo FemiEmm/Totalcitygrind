@@ -12,14 +12,22 @@ const expanded = ref(false);
 const panelId = useId();
 const clampPercent = value => Math.max(0, Math.min(100, Number(value) || 0));
 const bars = computed(() => [
-  { id: "health", label: "Health", value: clampPercent(props.health), icon: "fa-heart", bad: props.health <= 20 },
-  { id: "energy", label: "Energy", value: clampPercent(props.energy), icon: "fa-bolt", bad: props.energy <= 20 },
-  { id: "fuel", label: "Fuel", value: clampPercent(props.fuel), icon: "fa-gas-pump", bad: props.fuel <= 20 },
-  { id: "damage", label: "Damage", value: clampPercent(props.damage), icon: "fa-car-burst", bad: props.damage >= 70 },
+  // The first status bar is the player's food/health need. Use the requested hunger face when it is the only critical need.
+  { id: "health", label: "Health", value: clampPercent(props.health), icon: "fa-heart", bad: props.health < 30, singleMood: "🤤" },
+  { id: "energy", label: "Energy", value: clampPercent(props.energy), icon: "fa-bolt", bad: props.energy < 30, singleMood: "😴" },
+  { id: "fuel", label: "Fuel", value: clampPercent(props.fuel), icon: "fa-gas-pump", bad: props.fuel < 30, singleMood: "😱" },
+  // Damage is stored as damage taken, so vehicle condition is 100 - damage.
+  { id: "damage", label: "Damage", value: clampPercent(props.damage), icon: "fa-car-burst", bad: (100 - clampPercent(props.damage)) < 30, singleMood: "😠" },
 ]);
-const badCount = computed(() => bars.value.filter(bar => bar.bad).length);
-const mood = computed(() => props.intoxication >= 30 ? "🥴" : ["😄", "🙂", "😐", "🙁", "😠"][badCount.value]);
-const summary = computed(() => props.intoxication >= 30 ? "Intoxication: " + Math.round(props.intoxication) + "%" : badCount.value ? badCount.value + " of 4 indicators need attention" : "All four indicators are good");
+const badBars = computed(() => bars.value.filter(bar => bar.bad));
+const badCount = computed(() => badBars.value.length);
+const mood = computed(() => {
+  if (props.intoxication >= 30) return "🥴";
+  if (badCount.value === 0) return "😄";
+  if (badCount.value === 1) return badBars.value[0].singleMood;
+  return ({ 2: "😐", 3: "🙁", 4: "😠" })[badCount.value] ?? "😄";
+});
+const summary = computed(() => props.intoxication >= 30 ? "Intoxicated" : badCount.value ? badCount.value + " of 4 indicators need attention" : "All four indicators are good");
 </script>
 <template>
   <aside class="player-status" :class="{ 'player-status--collapsed': !expanded }" aria-label="Player status">
@@ -29,7 +37,6 @@ const summary = computed(() => props.intoxication >= 30 ? "Intoxication: " + Mat
       <span aria-hidden="true">{{ mood }}</span>
     </button>
     <div v-if="expanded" :id="panelId" class="player-status__bars">
-      <small v-if="intoxication > 0">🥴 Intoxication {{Math.ceil(intoxication)}}%</small>
       <div v-for="bar in bars.filter(item => item.id !== 'energy' || showEnergy)" :key="bar.id" class="player-status__row" :class="'player-status__row--' + bar.id"
         :title="bar.label + ': ' + Math.round(bar.value) + '%'">
         <i class="fa-solid" :class="bar.icon" aria-hidden="true" />

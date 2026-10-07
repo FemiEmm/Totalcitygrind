@@ -2,7 +2,7 @@
 export const NOMINATION_FEE=10000000;
 export const DEFAULT_GOVERNOR={id:null,name:'DIDEJADE OWOWOLU'};
 export const PUBLIC_EMPLOYERS=['police-station','lastma-office','lawma-office','hospital','school'];
-export const GOVERNOR_BAY={x:46*120,y:-2*120,width:120,height:120};
+export const GOVERNOR_BAY={x:48*120,y:-4*120,width:120,height:120};
 const DAY=86400000,WEEK=7*DAY;
 export function electionClock(now=Date.now()){
  const local=now+3600000,day=new Date(local).getUTCDay();

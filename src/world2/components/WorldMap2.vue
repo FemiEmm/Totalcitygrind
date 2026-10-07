@@ -1,5 +1,6 @@
 <script setup>
 import { advanceIntoxication, intoxicationSteering } from '../../player/systems/intoxication.js';
+import { connection, reportBalanceForAntiCheat } from '../../network/connection.js';
 import { migrateLocationLabels } from "../../game/migrateLocationLabels.js";
 import { createCrimeState, restoreCrimeState, addCrime } from "../../police/policeSystem.js";
 import { calculateNetWorth } from "../../wealth/netWorth.js";
@@ -576,9 +577,21 @@ const economyState = reactive(
     gameClock.day,
   ),
 );
+watch(
+  () => economyState.money,
+  (money) => {
+    if (connection.user?.id && Number(money) > 100_000_000) void reportBalanceForAntiCheat(money).catch(() => {});
+  },
+);
+function blockReviewedTransaction() {
+  if (!connection.transactionsLocked) return false;
+  connection.error = 'Transactions are temporarily unavailable while account activity is reviewed.';
+  return true;
+}
 const bankSavingsState = reactive(createBankSavingsState(gameClock.day));
 const customizationState = reactive(createCustomizationState());
 function handleCustomizeVehicle({ kind, id }) {
+  if (blockReviewedTransaction()) return;
   const result = applyCustomization(customizationState, activeVehicleConfig.value.id, kind, id, economyState.money);
   if (!result.ok) return;
   if (result.price > 0) chargeExpense({ economyState, amount: result.price, type: 'vehicle-customization', label: result.label, config: DANFO_ECONOMY_CONFIG });
@@ -588,9 +601,9 @@ let agberoPaymentSequence = 0;
 const stockMarketState = reactive(createStockMarketState());
 const stockMarketView = computed(() => getStockMarketView(stockMarketState));
 const bankMessageFeed = computed(() => {
-  return [...bankSavingsState.messages, ...economyState.transactions].sort(
-    (left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0),
-  );
+  return bankSavingsState.messages
+    .filter(message => message.direction === "notice")
+    .sort((left, right) => Number(right.createdAt || 0) - Number(left.createdAt || 0));
 });
 
 function processStockMarketUpdate() {
@@ -602,6 +615,7 @@ function processStockMarketUpdate() {
   });
 }
 function handleSubscribeStockAdviser() {
+  if (blockReviewedTransaction()) return;
   const cost = subscribeStockAdviser(stockMarketState, gameClock.day, economyState.money);
   if (cost !== null) {
     if (cost > 0) chargeExpense({ economyState, amount: cost, type: "stock-adviser", label: "STOCK ADVISER - 7 DAYS", config: DANFO_ECONOMY_CONFIG });
@@ -6213,6 +6227,7 @@ defineExpose({
 });
 
 function handleMechanicCall() {
+  if (blockReviewedTransaction()) return;
   if (economyState.gameOver) {
     return;
   }
@@ -6233,6 +6248,7 @@ function handleMechanicCall() {
 }
 
 function handleFuelAttendantCall() {
+  if (blockReviewedTransaction()) return;
   if (economyState.gameOver) return;
 
   const quote = roadsideFuelQuote.value;
@@ -6285,6 +6301,7 @@ function purchaseHealthTreatment({
   type,
   useCoupon = false,
 }) {
+  if (blockReviewedTransaction()) return;
   const applyCoupon = Boolean(useCoupon) && lifeObligationState.discountCoupons > 0;
   const payableCost = Math.round(cost * (applyCoupon ? 0.5 : 1));
   if (
@@ -6310,6 +6327,7 @@ function purchaseHealthTreatment({
 }
 
 function handleHealthTreatment(options = {}) {
+  if (blockReviewedTransaction()) return;
   const service = nearbyHealthService.value;
 
   if (!service) {
@@ -6329,6 +6347,7 @@ function handleHealthTreatment(options = {}) {
 }
 
 function handleDoctorCall() {
+  if (blockReviewedTransaction()) return;
   purchaseHealthTreatment({
     provider: "Mobile Doctor",
     cost: PLAYER_STATUS_CONFIG.doctorCallCost,
@@ -6389,6 +6408,7 @@ function handleEnergyDepleted() {
 }
 
 function handleFoodPurchase(itemId) {
+  if (blockReviewedTransaction()) return;
   const item = availableFoodItems.value.find((candidate) => {
     return candidate.id === itemId;
   });
@@ -6455,6 +6475,7 @@ function handlePocketFoodCycle() {
 }
 
 function handleFinePayment() {
+  if (blockReviewedTransaction()) return;
   const amount = fineState.outstandingAmount;
 
   if (amount <= 0 || economyState.money < amount) {
@@ -6473,6 +6494,7 @@ function handleFinePayment() {
 }
 
 function handleRentPayment() {
+  if (blockReviewedTransaction()) return;
   const amount = lifeObligationView.value.rent.amountDue;
 
   if (
@@ -6504,6 +6526,7 @@ function handleRentPayment() {
 }
 
 function handleSchoolFeesPayment(requestedAmount) {
+  if (blockReviewedTransaction()) return;
   const remaining =
     lifeObligationView.value.schoolFees.remainingAmount;
   const amount = Math.min(
@@ -6539,6 +6562,7 @@ function handleSchoolFeesPayment(requestedAmount) {
 }
 
 function handleFamilyRequestPayment(requestedAmount) {
+  if (blockReviewedTransaction()) return;
   const familyView = lifeObligationView.value.familyRequests;
   const activeRequest = familyView.entries.find((entry) => entry.id === familyView.activeId);
   if (!activeRequest) return;
@@ -6842,6 +6866,7 @@ function handleCarOwnerCall() {
 }
 
 function handleVehiclePurchase(vehicleId) {
+  if (blockReviewedTransaction()) return;
   const vehicle = PURCHASABLE_CARS.find((candidate) => {
     return candidate.id === vehicleId;
   });
@@ -6862,6 +6887,7 @@ function handleVehiclePurchase(vehicleId) {
 }
 
 function handlePropertyPurchase({ propertyId, paymentMethod }) {
+  if (blockReviewedTransaction()) return;
   const result = purchaseProperty({
     state: propertyState,
     propertyId,
@@ -6896,6 +6922,7 @@ function handlePropertyPurchase({ propertyId, paymentMethod }) {
 }
 
 function handleBusinessOfficePurchase() {
+  if (blockReviewedTransaction()) return;
   const result = purchaseBusinessOffice({
     state: businessState,
     money: economyState.money,
@@ -6916,6 +6943,7 @@ function handleBusinessOfficePurchase() {
 }
 
 function handleBusinessAssetPurchase(assetId) {
+  if (blockReviewedTransaction()) return;
   const result = purchaseBusinessAsset({
     state: businessState,
     assetId,
@@ -6938,6 +6966,7 @@ function handleBusinessAssetPurchase(assetId) {
 }
 
 function handleRaceStart() {
+  if (blockReviewedTransaction()) return;
   if (
     currentMapId.value !== "coastal-city" ||
     !nearbyRaceCircuit.value ||
@@ -6975,6 +7004,7 @@ function handleTrackedObjectiveSelection(objectiveId) {
 }
 
 function handleObjectiveRewardClaim(objectiveId) {
+  if (blockReviewedTransaction()) return;
   const reward = claimObjectiveReward(
     objectiveState,
     objectiveId,
@@ -7004,6 +7034,7 @@ function handleMapDestinationSelection(locationId) {
 }
 
 function handleStartDrivingTest() {
+  if (blockReviewedTransaction()) return;
   const usableStops = busStops.filter((stop) => {
     return Number.isFinite(stop.x) && Number.isFinite(stop.y);
   });
@@ -7095,14 +7126,17 @@ function handleRejectMotoEaziRequest(requestId) {
 }
 
 function handleSavingsDeposit(amount) {
+  if (blockReviewedTransaction()) return;
   depositIntoSavings(bankSavingsState, economyState, amount);
 }
 
 function handleSavingsWithdrawal(amount) {
+  if (blockReviewedTransaction()) return;
   withdrawFromSavings(bankSavingsState, economyState, amount);
 }
 
 function handleBuyStock(companyId) {
+  if (blockReviewedTransaction()) return;
   const price = buyStock(stockMarketState, companyId, economyState.money);
   if (!price) return;
   chargeExpense({
@@ -7116,6 +7150,7 @@ function handleBuyStock(companyId) {
 }
 
 function handleSellStock(companyId) {
+  if (blockReviewedTransaction()) return;
   const proceeds = sellStock(stockMarketState, companyId);
   if (!proceeds) return;
   creditIncome({
@@ -7129,6 +7164,7 @@ function handleSellStock(companyId) {
 }
 
 function handleTakeLoan(amount) {
+  if (blockReviewedTransaction()) return;
   const result = borrowBankLoan({
     economyState,
     amount,
@@ -7145,6 +7181,7 @@ function handleTakeLoan(amount) {
 }
 
 function handlePhoneBankLoan() {
+  if (blockReviewedTransaction()) return;
   const result = borrowQuickLoan({
     economyState,
     config: DANFO_ECONOMY_CONFIG,
@@ -7157,6 +7194,7 @@ function handlePhoneBankLoan() {
 }
 
 function handleFuelPurchase(payload) {
+  if (blockReviewedTransaction()) return;
   const requestedLitres = typeof payload === "object" ? payload.requestedLitres : payload;
   const useCoupon = Boolean(payload?.useCoupon) && lifeObligationState.discountCoupons > 0;
   const fuelBeforePurchase = hudState.fuel;
@@ -7182,6 +7220,7 @@ function handleFuelPurchase(payload) {
 }
 
 function handleLoanRepayment({ amount, receiver, loanType }) {
+  if (blockReviewedTransaction()) return;
   const result = repayBankLoan({
     economyState,
     amount,
@@ -7637,6 +7676,22 @@ function recordMarketReceipt(event) {
 }
 observeTransactions(economyState, recordMarketReceipt);
 observeTransactions(bankSavingsState, recordMarketReceipt);
+function handlePlayerTransferSent(amount) {
+  if (blockReviewedTransaction()) return;
+  const value = Math.max(0, Math.round(Number(amount) || 0));
+  if (!value || value > economyState.money) return;
+  chargeExpense({ economyState, amount: value, type: "player-transfer", label: "PLAYER TRANSFER SENT", config: DANFO_ECONOMY_CONFIG });
+  saveGame();
+}
+
+function handlePlayerTransferReceived(amount) {
+  if (blockReviewedTransaction()) return;
+  const value = Math.max(0, Math.round(Number(amount) || 0));
+  if (!value) return;
+  creditIncome({ economyState, amount: value, type: "player-transfer", label: "PLAYER TRANSFER RECEIVED", config: DANFO_ECONOMY_CONFIG });
+  saveGame();
+}
+
 </script>
 
 <template>
@@ -8062,7 +8117,8 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       :roadside-fuel-cost="roadsideFuelQuote.cost"
       :roadside-fuel-percent="roadsideFuelQuote.deliveredFuelPercent"
       :roadside-fuel-distance="roadsideFuelQuote.distanceTiles"
-      :transactions="bankMessageFeed"
+      :transactions="economyState.transactions"
+      :bank-messages="bankMessageFeed"
       :outstanding-fines="fineState.outstandingAmount"
       :fine-entries="fineState.entries"
       :vehicle-impounded="fineState.vehicleImpounded"
@@ -8156,6 +8212,8 @@ observeTransactions(bankSavingsState, recordMarketReceipt);
       @save-game="saveGame"
       @debug-go-coastal-city="handleDebugGoToCoastalCity"
       @debug-start-race="handleDebugStartRace"
+      @player-transfer-sent="handlePlayerTransferSent"
+      @player-transfer-received="handlePlayerTransferReceived"
       @clear-saved-state="clearSavedState"
     />
 

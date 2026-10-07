@@ -12,7 +12,7 @@ const images=[eko,gold,rose,noir,crown];
  <button v-if="club.parked.value&&!club.modal.value" class="club-open" @click="club.modal.value=true;club.act()">🥂 Night Club</button>
  <div v-if="club.modal.value" class="club-shade" @click.self="club.modal.value=false"><section class="club-panel" role="dialog" aria-modal="true" aria-label="Night Club drinks" @keydown.stop @keyup.stop>
   <header><h2>Night Club</h2><button aria-label="Close" @click="club.modal.value=false">✕</button></header>
-  <p>Intoxication: {{Math.ceil(intoxication||0)}}% · Drinks are consumed when purchased.</p><p>Effects fade over 10 game hours. Sleep clears them twice as fast.</p>
+  <p v-if="intoxication > 0">🥴 You are intoxicated. Drinks are consumed when purchased.</p><p v-else>Drinks are consumed when purchased.</p><p>Effects fade over 10 game hours. Sleep clears them twice as fast.</p>
   <p v-if="club.error.value" role="alert">{{club.error.value}}</p>
   <article v-for="(drink,index) in CLUB_DRINKS" :key="drink.id"><img :src="images[index]" :alt="drink.name"/><div><strong>{{drink.name}}</strong><p>₦{{drink.price.toLocaleString()}} · +{{drink.intoxication}}% intoxication</p><small v-if="drink.celebration">Your name on the roof · 30 seconds of neon lights</small><button :disabled="club.busy.value||money<drink.price" @click="club.act('buy',drink.id)">Buy & drink</button></div></article>
  </section></div>

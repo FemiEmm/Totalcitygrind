@@ -120,7 +120,7 @@ function isAtWorldEdge(vehicle) {
 
   return (
     vehicle.x <= edgeMargin ||
-    vehicle.y <= (vehicle.routeId === 'north-estate-to-west-south-avenue' ? WORLD_MIN_Y + edgeMargin : edgeMargin) ||
+    vehicle.y <= WORLD_MIN_Y + edgeMargin ||
     vehicle.x >= WORLD_WIDTH - edgeMargin ||
     vehicle.y >= WORLD_HEIGHT - edgeMargin
   );

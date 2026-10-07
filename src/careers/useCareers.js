@@ -25,7 +25,7 @@ export function useCareers(ctx){
   if(wanted && !local.returnVehicle){local.returnVehicle=state.returnVehicle||(ctx.vehicle().startsWith('service-')?'starter-danfo':ctx.vehicle());local.returnPose=state.returnPose||{x:ctx.player.x,y:ctx.player.y,rotation:ctx.player.rotation};}
   if(!wanted && !local.returnVehicle && ctx.vehicle().startsWith('service-')){local.returnVehicle=state.returnVehicle||'starter-danfo';local.returnPose=state.returnPose||null;}
   if(wanted && ctx.vehicle()!==wanted){
-   ctx.swap(wanted,duty.value==='lawma'?{x:59*120,y:-6*120,rotation:Math.PI}:null);
+   ctx.swap(wanted,duty.value==='lawma'?{x:57*120,y:-6*120,rotation:Math.PI}:null);
   }else if(!wanted && local.returnVehicle){const id=local.returnVehicle,pose=local.returnPose;local.returnVehicle=null;local.returnPose=null;ctx.swap(id,pose);}
  }
  async function act(input){

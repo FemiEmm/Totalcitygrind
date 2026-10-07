@@ -1,3 +1,5 @@
+import { schoolCampus, lastmaCompound, lawmaCompound, governorCompound } from '../../world/data/civicSites.js';
+import { northernResidential } from '../../world/data/northernResidential.js';
 ﻿import { GRID_SIZE } from "../../world/data/mapConstants.js";
 import { nightlife } from "../../world/data/nightlife.js";
 import { startingResidential } from "../../world/data/startingResidential.js";
@@ -188,8 +190,29 @@ export const MOTO_EAZI_LOCATIONS = Object.freeze(
   }),
 );
 
+// Phone navigation targets use the actual parking data, so moving a bay
+// also moves its destination. Civic places are not passenger pickup points.
+const civicMapLocations = [schoolCampus, lastmaCompound, lawmaCompound, governorCompound].flatMap(district =>
+  district.landmarks.map(landmark => {
+    const bay = district.publicParkingZones[0];
+    return {
+      id: landmark.id, label: landmark.label,
+      searchAliases: landmark.id === 'governor-residence' ? 'governor house government' : '',
+      districtId: district.id, districtName: district.name, type: 'place',
+      x: district.worldX + bay.x + bay.width / 2,
+      y: district.worldY + bay.y + bay.height / 2,
+    };
+  }),
+);
+const sangoHomeMapLocations = northernResidential.homeParkingZones.map(bay => ({
+  id: bay.homeId, label: bay.label.replace(/ PARKING$/, ''),
+  districtId: northernResidential.id, districtName: northernResidential.name, type: 'place',
+  x: northernResidential.worldX + bay.x + bay.width / 2,
+  y: northernResidential.worldY + bay.y + bay.height / 2,
+}));
+
 export const MAP_DRIVING_LOCATIONS = Object.freeze(
-  [...landmarkLocations, ...roadsideLocations, ...districtCoverageLocations].map((location) => {
+  [...civicMapLocations, ...sangoHomeMapLocations, ...landmarkLocations, ...roadsideLocations, ...districtCoverageLocations].map((location) => {
     return Object.freeze(location);
   }),
 );

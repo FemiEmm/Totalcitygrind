@@ -18,7 +18,7 @@ export const WORKPLACES = [
  site('clinic','Igando Clinic',2,30,['doctor','nurse','reception'],2),
  site('police-station','Police Station',49,26,['police'],0,4,1),
  site('lastma-office','LASTMA Office',51,-3,['lastma'],1,2,1),
- site('lawma-office','LAWMA Depot',58,-8,['lawma'],1,2,4),
+ site('lawma-office','LAWMA Depot',56,-8,['lawma'],1,2,4),
  site('school','Sango Otta School',41,-8,['teacher'],1,5,1),
  site('bank','MegaPay Bank',49,14,['cashier','manager','accountant']),
  site('office','Mangoro Offices',49,5,['clerk','accountant','manager']),
