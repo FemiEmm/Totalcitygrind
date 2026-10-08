@@ -278,3 +278,12 @@ The client and Backender government interaction now both use GOV parking at X48 
 The tree-filled gaps beside Sango Otta now use grass. Only roads in `src/world/data/northernApproaches.js` use a mud surface: the west and east edge approaches, their right-angle turns, and their mainland links. Player vehicles and AI traffic travel at 50% normal road speed on those approach rectangles; normal speed resumes off them. Sango estate streets and the existing city roads retain their surfaces. Surface detection: `src/world/systems/roadSurface.js`.
 
 New woodland trees use circular collision areas at 90% of canopy diameter with `blocksVehicles: true`; player and AI vehicle collision checks use the existing obstacle spatial index.
+
+### Continuous Sango ground — 2026-10-08
+
+Sango and its northern woodland use world-aligned procedural grass and mud surfaces (`src/world/systems/mainlandTerrain.js` (originally `sangoTerrain.js`)). Yard strips and woodland mud roads share one blended mask per cached map chunk, hiding adjoining strip seams and softening grass/mud verges. Other districts retain their existing ground rendering. Tree placement, road rectangles, collision and 50% mud speed penalties are unchanged.
+
+
+### Continuous Mainland ground — 2026-10-08
+
+The approved Sango grass and mud treatment now extends to every Mainland district, including Ifako-Ijaiye, Ikeja, Alimosho, Mushin and the northern civic compounds. District grass uses the same world-aligned texture. Dirt roads, yard patches and existing single-room-row earth foundations share one blended ground mask per cached chunk. Paved road surfaces, building artwork, parking, trees, collision and road coordinates are unchanged. Only the northern woodland approach roads retain the existing 50% slowdown; no new terrain speed penalties were added. Coast City rendering is unchanged. Renderer: `src/world/systems/mainlandTerrain.js`; integration: `src/world/components/WorldMap.vue`.

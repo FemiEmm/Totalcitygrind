@@ -50,6 +50,7 @@ import untarredRoadTileUrl from "../../assets/roads/untarred-road-tile.png";
 import busStopCanopyUrl from "../../assets/world/bus-stop-canopy.png";
 import grassTileUrl from "../../assets/ground/grass-tile.png";
 import trafficLightConcreteUrl from "../../assets/ground/traffic-light-concrete.png";
+import { drawMainlandGrass, drawMainlandMud } from '../systems/mainlandTerrain.js';
 import { northernRoadSpeedMultiplier } from '../systems/roadSurface.js';
 import ShareApp from '../../phone/components/ShareApp.vue';
 import sangoSoilUrl from '../../assets/environment/sango-soil-topdown-1x1.png';
@@ -777,6 +778,7 @@ function handleObjectiveEvent(type, amount = 1) {
 }
 
 function processCurrentLifeObligations() {
+  processGodModeFinances();
   const events = processLifeObligationDay({
     state: lifeObligationState,
     currentDay: gameClock.day,
@@ -1198,6 +1200,34 @@ const employmentState = reactive({
 });
 
 const godMode = ref(false);
+function processGodModeFinances() {
+  if (!godMode.value || !propertyState.starterHomeId) return;
+  let changed = false;
+  const day = Math.floor(gameClock.day);
+  if (day > (Number(economyState.lastGodModeIncomeDay) || 0)) {
+    const receipt = creditIncome({ economyState, amount: 100000, type: 'god-mode-allowance', label: 'GOD MODE DAILY ALLOWANCE', config: DANFO_ECONOMY_CONFIG });
+    if (receipt) { economyState.lastGodModeIncomeDay = day; changed = true; }
+  }
+  const rent = lifeObligationState.rent;
+  if (rent.status !== 'owned' && day >= rent.nextDueDay) {
+    const amount = rent.amount + rent.lateFee;
+    if (amount > 0 && economyState.money >= amount) {
+      const receipt = chargeExpense({ economyState, amount, type: 'weekly-rent', label: 'GOD MODE AUTO RENT', config: DANFO_ECONOMY_CONFIG });
+      if (receipt) {
+        payWeeklyRent({ state: lifeObligationState, currentDay: day });
+        handleObjectiveEvent('rent-paid');
+        changed = true;
+      }
+    }
+  }
+  if (changed) saveGame();
+}
+watch(godMode, enabled => {
+  if (!enabled) return;
+  processGodModeFinances();
+  // Other rented homes already collect rent through the housing settlement flow.
+  void housing.act();
+});
 watch(() => [playerStatus.health, playerStatus.energy, godMode.value], () => {
   if(godMode.value){playerStatus.health=PLAYER_STATUS_CONFIG.maximumHealth;playerStatus.energy=PLAYER_STATUS_CONFIG.maximumEnergy;}
 }, {flush:"sync"});
@@ -2457,6 +2487,8 @@ function staticItemTouchesTile(item, tileBounds) {
 }
 
 function drawStaticRoadSurface(context, road) {
+  // Mainland dirt is already drawn in the shared ground layer, with blended verges.
+  if (currentMapId.value === "mainland" && (road.surface === "mud" || road.type === "dirt")) return;
   const surfaceImage = road.surface === "mud" ? sangoSoilImage :
     road.type === "dirt"
       ? untarredRoadTileImage
@@ -2655,15 +2687,9 @@ function renderStaticMapTile(column, row) {
   context.imageSmoothingEnabled = true;
   context.translate(-tileX, -tileY);
 
-  // Grass under the woodland approaches; mud is drawn only on their roads.
-  if(currentMapId.value==='mainland'&&tileY<0){
-    const firstX=Math.max(0,Math.floor(tileX/GRID_SIZE)),lastX=Math.min(64,Math.ceil((tileX+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
-    const firstY=Math.max(-71,Math.floor(tileY/GRID_SIZE)),lastY=Math.min(0,Math.ceil((tileY+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
-    context.fillStyle='#648a32';
-    for(let y=firstY;y<lastY;y++)for(let x=firstX;x<lastX;x++){
-      if(grassTileImage)context.drawImage(grassTileImage,x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
-      else context.fillRect(x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
-    }
+  // One continuous grass surface for Sango and its surrounding woodland.
+  if (currentMapId.value === 'mainland' && tileY < 0) {
+    drawMainlandGrass(context, { x: 0, y: -71 * GRID_SIZE, width: WORLD_WIDTH, height: 71 * GRID_SIZE });
   }
   districts.forEach((district) => {
     const districtBounds = {
@@ -2677,6 +2703,10 @@ function renderStaticMapTile(column, row) {
       return;
     }
 
+    if (currentMapId.value === "mainland") {
+      drawMainlandGrass(context, districtBounds);
+      return; // Mud is composited once below, across district boundaries.
+    }
     context.fillStyle =
       (district.id !== "coastal-ocean" &&
         grassTileImage &&
@@ -2705,13 +2735,17 @@ function renderStaticMapTile(column, row) {
     }
   });
 
-  // Join the woodland grass to the mainland; approach road surfaces are drawn below.
   if (currentMapId.value === 'mainland') {
-    const transition = { x: 0, y: -2 * GRID_SIZE, width: WORLD_WIDTH, height: 2 * GRID_SIZE };
-    if (staticItemTouchesTile(transition, tileBounds)) {
-      context.fillStyle = (grassTileImage && context.createPattern(grassTileImage, 'repeat')) || '#648a32';
-      context.fillRect(transition.x, transition.y, transition.width, transition.height);
-    }
+    const mudRegions = [
+      ...roads.filter(road => road.surface === 'mud' || road.type === 'dirt'),
+      ...districts.flatMap(district => (district.mudGroundPatches ?? []).map(patch => ({
+        x: district.worldX + patch.x, y: district.worldY + patch.y,
+        width: patch.width, height: patch.height,
+      }))),
+      // Keep existing residential earth footprints, but blend them into neighboring ground.
+      ...buildings.filter(building => building.isLandmark && building.singleRoomRow),
+    ];
+    drawMainlandMud(context, tileBounds, mudRegions);
   }
 
   edgeBorderTiles.forEach((tile) => {
@@ -2731,7 +2765,6 @@ function renderStaticMapTile(column, row) {
   if(currentMapId.value==='mainland'&&sangoTreeImage){
     for(const tile of northernForestTiles){
       if(!staticItemTouchesTile(tile,tileBounds))continue;
-      if(grassTileImage)context.drawImage(grassTileImage,tile.x,tile.y,GRID_SIZE,GRID_SIZE);
       for(const tree of tile.trees){context.save();context.translate(tree.x,tree.y);context.rotate(tree.rotation);context.drawImage(sangoTreeImage,-tree.size/2,-tree.size/2,tree.size,tree.size);context.restore();}
     }
   }
@@ -3049,14 +3082,16 @@ function drawBuildingBody(
       context.rotate((building.spriteRotationQuarterTurns ?? 0) * Math.PI / 2);
       const width = vertical ? building.height : building.width;
       const height = vertical ? building.width : building.height;
-      // Keep the earth foundation inside the existing four-room footprint.
-      context.fillStyle = '#aa783f';
-      context.fillRect(-width / 2, -height / 2, width, height);
-      if (dryMudRowImage) {
-        context.drawImage(dryMudRowImage,
-          dryMudRowImage.width * 0.02, dryMudRowImage.height * 0.15,
-          dryMudRowImage.width * 0.955, dryMudRowImage.height * 0.68,
-          -width / 2, -height / 2, width, height);
+      // Mainland earth foundations are already blended into the cached ground layer.
+      if (currentMapId.value !== 'mainland') {
+        context.fillStyle = '#aa783f';
+        context.fillRect(-width / 2, -height / 2, width, height);
+        if (dryMudRowImage) {
+          context.drawImage(dryMudRowImage,
+            dryMudRowImage.width * 0.02, dryMudRowImage.height * 0.15,
+            dryMudRowImage.width * 0.955, dryMudRowImage.height * 0.68,
+            -width / 2, -height / 2, width, height);
+        }
       }
       const roofInset = height * 0.045;
       context.drawImage(landmarkSprite,
@@ -4980,6 +5015,7 @@ function updateGameSimulation(deltaSeconds) {
 
     if (gameClock.day !== previousDay) {
       void syncOnlineEconomyDayClose(previousDay);
+      processGodModeFinances();
       offerBankLoan({
         economyState,
         currentDay: gameClock.day,
@@ -5575,7 +5611,7 @@ function restoreSavedGame() {
     Object.assign(routeState, saveData.routeState ?? {});
     Object.assign(passengerState, saveData.passengerState ?? {});
     passengerPopulation.restore(saveData.passengerPool,saveData.passengerPopulationLocal);
-    Object.assign(economyState, { firstShareRewardClaimed: false, lastAgberoTicketDay: 0, quickLoanInterestRemaining: 0, bankLoanInterestRemaining: 0 }, saveData.economyState ?? {});
+    Object.assign(economyState, { firstShareRewardClaimed: false, lastGodModeIncomeDay: 0, lastAgberoTicketDay: 0, quickLoanInterestRemaining: 0, bankLoanInterestRemaining: 0 }, saveData.economyState ?? {});
     normaliseLoanState(economyState, DANFO_ECONOMY_CONFIG);
     restoreBankSavingsState(
       bankSavingsState,

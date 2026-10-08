@@ -3021,7 +3021,7 @@ function repayLoan() {
             </header>
 
             <button role="switch" :aria-checked="aiTrafficEnabled" class="game-phone__debug-action" @click="$emit('toggle-ai-traffic')"><i class="fa-solid fa-car"/><span><strong>AI traffic</strong><small>Remove or restore AI vehicles. Online players stay.</small></span><ToggleIcon :checked="aiTrafficEnabled" /></button>
-            <button role="switch" :aria-checked="godMode" class="game-phone__debug-action" @click="$emit('toggle-god-mode')"><i class="fa-solid fa-shield-halved"/><span><strong>God Mode</strong><small>Keep health and energy full; no automatic pause when you switch apps.</small></span><ToggleIcon :checked="godMode" /></button>
+            <button role="switch" :aria-checked="godMode" class="game-phone__debug-action" @click="$emit('toggle-god-mode')"><i class="fa-solid fa-shield-halved"/><span><strong>God Mode</strong><small>Full health and energy, ₦100,000 each game day, automatic rent, and no pause when switching apps.</small></span><ToggleIcon :checked="godMode" /></button>
             <button role="switch" :aria-checked="debugVisible" aria-label="Debug view"
               type="button"
               :class="{ 'game-phone__debug-action--active': debugVisible }"

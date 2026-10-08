@@ -79,6 +79,7 @@ export function createDanfoEconomyState(config, startingDay = 1) {
   return {
     money: config.startingMoney,
     firstShareRewardClaimed: false,
+    lastGodModeIncomeDay: 0,
     lastProcessedDay: startingDay,
     totalPassengerFares: 0,
     totalRouteBonuses: 0,
