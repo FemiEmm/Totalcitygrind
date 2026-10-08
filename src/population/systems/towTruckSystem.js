@@ -352,10 +352,7 @@ function moveTruckAlongPath(
   config,
   collisionContext,
 ) {
-  const speed =
-    truck.status === "towing"
-      ? config.towingSpeed
-      : config.speed;
+  const speed = (truck.status === "towing" ? config.towingSpeed : config.speed) * (config.surfaceSpeedMultiplier?.(truck) ?? 1);
   let remainingMovement = speed * deltaSeconds;
   let processedPathPoints = 0;
   let moved = false;

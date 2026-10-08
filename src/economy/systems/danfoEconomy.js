@@ -78,6 +78,7 @@ export function normaliseLoanState(economyState, config) {
 export function createDanfoEconomyState(config, startingDay = 1) {
   return {
     money: config.startingMoney,
+    firstShareRewardClaimed: false,
     lastProcessedDay: startingDay,
     totalPassengerFares: 0,
     totalRouteBonuses: 0,

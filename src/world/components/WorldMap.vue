@@ -50,6 +50,8 @@ import untarredRoadTileUrl from "../../assets/roads/untarred-road-tile.png";
 import busStopCanopyUrl from "../../assets/world/bus-stop-canopy.png";
 import grassTileUrl from "../../assets/ground/grass-tile.png";
 import trafficLightConcreteUrl from "../../assets/ground/traffic-light-concrete.png";
+import { northernRoadSpeedMultiplier } from '../systems/roadSurface.js';
+import ShareApp from '../../phone/components/ShareApp.vue';
 import sangoSoilUrl from '../../assets/environment/sango-soil-topdown-1x1.png';
 import sangoTreeUrl from '../../assets/environment/sango-tree-topdown-1x1.png';
 import {northernForestTiles} from '../data/worldMap.js';
@@ -321,7 +323,6 @@ import {
 } from "../../population/systems/highwayLightSystem.js";
 import {
   createTowTruckState,
-  reportViewportTraffic,
   updateTowTrucks,
 } from "../../population/systems/towTruckSystem.js";
 import {
@@ -991,6 +992,16 @@ const PLAYER_WARNING_CONFIG = Object.freeze({
 });
 const activePlayerWarning = ref(null);
 const firstRoutePrompt=ref(false);
+const shareWelcomeVisible = ref(false);
+const shareRewardAmount = computed(() => economyState.firstShareRewardClaimed ? 20000 : 50000);
+function handleShareReward({ complete }) {
+  const amount = shareRewardAmount.value;
+  const receipt = creditIncome({ economyState, amount, type: 'share-reward', label: amount === 50000 ? 'FIRST SHARE REWARD' : 'SHARE REWARD', config: DANFO_ECONOMY_CONFIG });
+  if (!receipt) { complete({ error: 'Rewards are currently unavailable for this account.' }); return; }
+  economyState.firstShareRewardClaimed = true;
+  saveGame();
+  complete({ amount });
+}
 const energyDepleted = ref(false);
 let playerWarningTimer = null;
 
@@ -1228,6 +1239,7 @@ const performanceDisplay = reactive({
   tileCacheMisses: 0,
 });
 const runtimeTrafficConfig = {
+  surfaceSpeedMultiplier: position => currentMapId.value === "mainland" ? northernRoadSpeedMultiplier(position) : 1,
   ...POPULATION_TRAFFIC_CONFIG,
 };
 
@@ -2377,6 +2389,7 @@ function drawRoadDivider(context, road) {
   const roadThickness = Math.min(road.width, road.height);
 
   if (
+    road.surface === "mud" ||
     road.type === "dirt" ||
     roadThickness < GRID_SIZE * 2
   ) {
@@ -2444,7 +2457,7 @@ function staticItemTouchesTile(item, tileBounds) {
 }
 
 function drawStaticRoadSurface(context, road) {
-  const surfaceImage =
+  const surfaceImage = road.surface === "mud" ? sangoSoilImage :
     road.type === "dirt"
       ? untarredRoadTileImage
       : asphaltTileImage;
@@ -2477,7 +2490,7 @@ function drawStaticRoadSurface(context, road) {
   }
 
   context.fillStyle =
-    road.type === "dirt"
+    road.surface === "mud" || road.type === "dirt"
       ? "#946331"
       : "#484d53";
   context.fillRect(
@@ -2642,13 +2655,13 @@ function renderStaticMapTile(column, row) {
   context.imageSmoothingEnabled = true;
   context.translate(-tileX, -tileY);
 
-  // Soil under the entire northern extension, including the former black gaps.
+  // Grass under the woodland approaches; mud is drawn only on their roads.
   if(currentMapId.value==='mainland'&&tileY<0){
     const firstX=Math.max(0,Math.floor(tileX/GRID_SIZE)),lastX=Math.min(64,Math.ceil((tileX+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
-    const firstY=Math.max(-69,Math.floor(tileY/GRID_SIZE)),lastY=Math.min(0,Math.ceil((tileY+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
-    context.fillStyle='#b16d36';
+    const firstY=Math.max(-71,Math.floor(tileY/GRID_SIZE)),lastY=Math.min(0,Math.ceil((tileY+STATIC_MAP_TILE_SIZE)/GRID_SIZE));
+    context.fillStyle='#648a32';
     for(let y=firstY;y<lastY;y++)for(let x=firstX;x<lastX;x++){
-      if(sangoSoilImage)context.drawImage(sangoSoilImage,x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
+      if(grassTileImage)context.drawImage(grassTileImage,x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
       else context.fillRect(x*GRID_SIZE,y*GRID_SIZE,GRID_SIZE,GRID_SIZE);
     }
   }
@@ -2692,34 +2705,12 @@ function renderStaticMapTile(column, row) {
     }
   });
 
-  // The original mainland ended two cells below Sango Otta. Paint that former black/blue
-  // boundary as drivable dry mud so the northern extension reads as continuous land.
-  const northMainlandMudTransition = {
-    x: 0,
-    y: -2 * GRID_SIZE,
-    width: WORLD_WIDTH,
-    height: 2 * GRID_SIZE,
-  };
-  if (staticItemTouchesTile(northMainlandMudTransition, tileBounds)) {
-    context.fillStyle = '#aa783f';
-    context.fillRect(
-      northMainlandMudTransition.x,
-      northMainlandMudTransition.y,
-      northMainlandMudTransition.width,
-      northMainlandMudTransition.height,
-    );
-    if (dryMudRowImage) {
-      for (let row = 0; row < 2; row += 1) {
-        for (let x = 0; x < WORLD_WIDTH; x += 4 * GRID_SIZE) {
-          const width = Math.min(4 * GRID_SIZE, WORLD_WIDTH - x);
-          context.drawImage(
-            dryMudRowImage,
-            dryMudRowImage.width * 0.02, dryMudRowImage.height * 0.15,
-            dryMudRowImage.width * 0.955, dryMudRowImage.height * 0.68,
-            x, (-2 + row) * GRID_SIZE, width, GRID_SIZE,
-          );
-        }
-      }
+  // Join the woodland grass to the mainland; approach road surfaces are drawn below.
+  if (currentMapId.value === 'mainland') {
+    const transition = { x: 0, y: -2 * GRID_SIZE, width: WORLD_WIDTH, height: 2 * GRID_SIZE };
+    if (staticItemTouchesTile(transition, tileBounds)) {
+      context.fillStyle = (grassTileImage && context.createPattern(grassTileImage, 'repeat')) || '#648a32';
+      context.fillRect(transition.x, transition.y, transition.width, transition.height);
     }
   }
 
@@ -2740,7 +2731,7 @@ function renderStaticMapTile(column, row) {
   if(currentMapId.value==='mainland'&&sangoTreeImage){
     for(const tile of northernForestTiles){
       if(!staticItemTouchesTile(tile,tileBounds))continue;
-      if(sangoSoilImage)context.drawImage(sangoSoilImage,tile.x,tile.y,GRID_SIZE,GRID_SIZE);
+      if(grassTileImage)context.drawImage(grassTileImage,tile.x,tile.y,GRID_SIZE,GRID_SIZE);
       for(const tree of tile.trees){context.save();context.translate(tree.x,tree.y);context.rotate(tree.rotation);context.drawImage(sangoTreeImage,-tree.size/2,-tree.size/2,tree.size,tree.size);context.restore();}
     }
   }
@@ -4747,7 +4738,7 @@ function updateGameSimulation(deltaSeconds) {
       playerCollisionBox,
       canOccupyWorld: canVehicleOccupy,
       deltaSeconds: trafficDeltaSeconds,
-      config: TOW_TRUCK_CONFIG,
+      config: { ...TOW_TRUCK_CONFIG, surfaceSpeedMultiplier: runtimeTrafficConfig.surfaceSpeedMultiplier },
       gameClock,
       viewBounds: {
         x: camera.x,
@@ -4779,6 +4770,7 @@ function updateGameSimulation(deltaSeconds) {
           pressedKeys: EMPTY_PLAYER_INPUT,
           deltaSeconds,
           config: activeVehicleConfig.value,
+          speedMultiplier: currentMapId.value === "mainland" ? northernRoadSpeedMultiplier(player) : 1,
           canOccupy: canPlayerOccupy,
         });
       } else if (vehicleDisabled || fuelDepleted) {
@@ -4799,6 +4791,7 @@ function updateGameSimulation(deltaSeconds) {
           pressedKeys,
           deltaSeconds,
           config: activeVehicleConfig.value,
+          speedMultiplier: currentMapId.value === "mainland" ? northernRoadSpeedMultiplier(player) : 1,
           canOccupy: canPlayerOccupy,
         });
         const distanceTravelled = Math.hypot(
@@ -5235,6 +5228,11 @@ function animationLoop(timestamp) {
     return;
   }
 
+  if (document.hidden && godMode.value) {
+    simulationAccumulator = 0;
+    animationFrameId = window.requestAnimationFrame(animationLoop);
+    return;
+  }
   pausedFrameRendered = false;
   simulationAccumulator += frameDeltaSeconds;
 
@@ -5577,7 +5575,7 @@ function restoreSavedGame() {
     Object.assign(routeState, saveData.routeState ?? {});
     Object.assign(passengerState, saveData.passengerState ?? {});
     passengerPopulation.restore(saveData.passengerPool,saveData.passengerPopulationLocal);
-    Object.assign(economyState, { lastAgberoTicketDay: 0, quickLoanInterestRemaining: 0, bankLoanInterestRemaining: 0 }, saveData.economyState ?? {});
+    Object.assign(economyState, { firstShareRewardClaimed: false, lastAgberoTicketDay: 0, quickLoanInterestRemaining: 0, bankLoanInterestRemaining: 0 }, saveData.economyState ?? {});
     normaliseLoanState(economyState, DANFO_ECONOMY_CONFIG);
     restoreBankSavingsState(
       bankSavingsState,
@@ -5822,11 +5820,13 @@ function beginNewGame({ homeId, playerName, onlineTenancy }) {
   stopPlayerVehicleEngine();
   centreCameraOnPlayer();
   firstRoutePrompt.value=true;
+  shareWelcomeVisible.value = !economyState.firstShareRewardClaimed;
   saveGame();
   return true;
 }
 
 defineExpose({
+  isGodMode: () => godMode.value,
   getNetworkPose: () => ({ x: player.x, y: player.y, rotation: player.rotation, speed: props.paused ? 0 : player.speed, vehicleId: activeVehicleConfig.value.id }),
   beginNewGame,
   transmission: computed(() => activeVehicleConfig.value.transmission),
@@ -5894,21 +5894,6 @@ function handleFuelAttendantCall() {
     handleObjectiveEvent("low-fuel-refuelled");
   }
   playGameSound("fuelPump", { loop: false });
-}
-
-function handleTrafficReport() {
-  reportViewportTraffic({
-    state: towTruckState,
-    trafficState: populationState,
-    trafficLights: (currentMapId.value === "mainland" ? ALL_SIGNAL_LIGHTS : []),
-    viewBounds: {
-      x: camera.x,
-      y: camera.y,
-      width: CAMERA_WIDTH,
-      height: CAMERA_HEIGHT,
-    },
-  });
-  playGameSound("confirm");
 }
 
 function purchaseHealthTreatment({
@@ -7135,7 +7120,26 @@ const careers=useCareers({
 watch(()=>connection.presence,status=>{if(status==='In city'){void heist.act();void housing.act();void careers.refresh();void government.act();void club.act();}});
 watch(()=>careers.modal.value,value=>{if(value){activeServiceModal.value=null;pressedKeys.clear();}});
 let disposeLocalStudio = () => {};
+let godModeBackgroundTimer = null;
+let backgroundTickAt = 0;
+function releaseBackgroundInput() { pressedKeys.clear(); }
+function updateGodModeInBackground() {
+  const now = performance.now();
+  const elapsed = backgroundTickAt ? Math.min(1, Math.max(0, (now - backgroundTickAt) / 1000)) : 0;
+  backgroundTickAt = now;
+  if (!document.hidden || !godMode.value || props.paused || !elapsed) return;
+  // Best effort only: mobile operating systems may suspend background tabs entirely.
+  let remaining = elapsed;
+  while (remaining > 0.001) {
+    const step = Math.min(FIXED_SIMULATION_STEP, remaining);
+    updateGameSimulation(step);
+    remaining -= step;
+  }
+  previousTimestamp = now;
+}
 onMounted(() => {
+  window.addEventListener('blur', releaseBackgroundInput);
+  godModeBackgroundTimer = window.setInterval(updateGodModeInBackground, 250);
   billboardLastSlotKey = `${realWorldAdDate()}:${realWorldAdSlot()}`;
   void refreshBillboardAds();
   billboardRefreshTimer = window.setInterval(() => { void refreshBillboardAds(); }, 10 * 60 * 1000);
@@ -7257,6 +7261,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.clearInterval(godModeBackgroundTimer);
+  window.removeEventListener('blur', releaseBackgroundInput);
   disposeLocalStudio();
   clubAudio.dispose();
   passengerPopulation.stop();
@@ -7703,6 +7709,9 @@ function handlePlaceAdPurchased(amount) {
       {{ !COAST_CITY_ENABLED ? COAST_CITY_LOCK_MESSAGE : currentMapId === "mainland" ? "Travel to Coast City" : "Return to Mainland Lagos" }}
     </button>
 
+    <div v-if="shareWelcomeVisible && !firstRoutePrompt && !paused" class="first-route-prompt share-welcome" role="dialog" aria-modal="true" aria-label="Share Total City Grind">
+      <section><ShareApp :reward-amount="shareRewardAmount" @shared="handleShareReward" /><button type="button" @click="shareWelcomeVisible = false">Continue to city</button></section>
+    </div>
     <SleepModal
       v-if="sleepState.modalOpen"
       @close="sleepState.modalOpen = false"
@@ -7719,6 +7728,7 @@ function handlePlaceAdPurchased(amount) {
     />
 
     <GamePhone
+      :share-reward-amount="shareRewardAmount" @share-completed="handleShareReward"
       :intoxication="playerStatus.intoxication || 0"
       :government="government.view.value" :government-unread="government.unread.value" :government-busy="government.busy.value" :government-error="government.error.value" @government-action="government.act"
       :career-state="careers.state" :career-minute="careers.minute.value" :career-occupied="careers.occupied.value" :career-busy="careers.busy.value" :career-error="careers.error.value"
@@ -7807,7 +7817,6 @@ function handlePlaceAdPurchased(amount) {
       :property-catalogue="PROPERTY_CATALOGUE"
       :heist-minute="policeMinute" :heist-view="heist.view.value" :heist-busy="heist.busy.value" :heist-error="heist.error.value" @heist-action="heist.act"
       :housing-view="housing.view.value" :housing-busy="housing.busy.value" :housing-error="housing.error.value" @housing-action="housing.act"
-      :traffic-report="towTruckState.trafficReport"
       @select-route="handleRouteSelection"
       @select-job="handleJobSelection"
       @start-driving-test="handleStartDrivingTest"
@@ -7823,7 +7832,6 @@ function handlePlaceAdPurchased(amount) {
       @call-mechanic="handleMechanicCall"
       @call-doctor="handleDoctorCall"
       @call-fuel-attendant="handleFuelAttendantCall"
-      @report-traffic="handleTrafficReport"
       @call-car-owner="handleCarOwnerCall"
       @call-mutiu="handleMutiuCall"
       @pay-fines="handleFinePayment"
@@ -7909,6 +7917,8 @@ function handlePlaceAdPurchased(amount) {
 </template>
 
 <style scoped>
+.share-welcome > section { max-height:calc(100dvh - 32px); overflow-y:auto; }
+.share-welcome .share-app { height:auto; }
 .world-map {
   position: relative;
   touch-action: none;

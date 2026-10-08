@@ -3429,6 +3429,7 @@ function updatePopulationVehicle({
     config,
   );
 
+  const surfaceSpeedMultiplier = config.surfaceSpeedMultiplier?.(vehicle) ?? 1;
   const calculatedRequestedSpeed =
     yieldBlocked
       ? 0
@@ -3440,7 +3441,7 @@ function updatePopulationVehicle({
           mergeLimitedSpeed,
         );
   const requestedSpeed = Number.isFinite(calculatedRequestedSpeed)
-    ? Math.max(0, calculatedRequestedSpeed)
+    ? Math.max(0, calculatedRequestedSpeed * surfaceSpeedMultiplier)
     : 0;
 
   const braking = requestedSpeed < vehicle.speed;

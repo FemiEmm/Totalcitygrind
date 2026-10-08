@@ -1,4 +1,5 @@
 <script setup>
+import ShareApp from './ShareApp.vue';
 import HeistPanel from '../../heist/HeistPanel.vue';
 import HousingApp from "../../housing/HousingApp.vue";
 import GovernmentPanel from '../../government/GovernmentPanel.vue';
@@ -381,6 +382,7 @@ const props = defineProps({
     default: () => [],
   },
   godMode: Boolean,
+  shareRewardAmount: { type: Number, default: 50000 },
   debugVisible: {
     type: Boolean,
     default: false,
@@ -429,14 +431,6 @@ const props = defineProps({
   },
   propertyState: { type: Object, default: () => ({ activeHomeId: "starter-rental", ownedPropertyIds: [], rentals: { listings: {}, messages: [] } }) },
   propertyCatalogue: { type: Array, default: () => [] },
-  trafficReport: {
-    type: Object,
-    default: () => ({
-      status: "idle",
-      message: "Report a visible traffic-light blockage.",
-      remainingSeconds: 0,
-    }),
-  },
 });
 
 const equippedPhone = computed(() => PHONES.find(phone => phone.id === props.customizationState.phone));
@@ -475,7 +469,6 @@ const emit = defineEmits([
   "call-mechanic",
   "call-doctor",
   "call-fuel-attendant",
-  "report-traffic",
   "repay-loan",
   "take-bank-loan",
   "subscribe-stock-adviser",
@@ -502,6 +495,7 @@ const emit = defineEmits([
   "save-game",
   "track-objective",
   "claim-objective-reward",
+  "share-completed",
   "objective-event",
   "pay-rent",
   "pay-school-fees",
@@ -1885,6 +1879,7 @@ function repayLoan() {
           </nav>
 
           <CareerPanel v-if="activeApp.id === 'me'" :state="careerState" :home-address="currentHomeAddress" :minute="careerMinute" :occupied="careerOccupied" :busy="careerBusy" :error="careerError" :bars="{health,energy,fuel,damage,intoxication}" @action="$emit('career-action',$event)" />
+          <ShareApp v-else-if="activeApp.id === 'share'" :reward-amount="shareRewardAmount" @shared="$emit('share-completed', $event)" />
           <HousingApp v-else-if="activeApp.id === 'housing'" :view="housingView" :busy="housingBusy" :error="housingError" @action="$emit('housing-action',$event)" />
           <BigPeopleClub v-else-if="activeApp.id === 'bpc'" :wealth="netWorth" :player-name="playerName" />
           <CustomizeShop
@@ -2150,23 +2145,6 @@ function repayLoan() {
                   <i class="fa-solid fa-chevron-right" aria-hidden="true" />
                 </button>
               </div>
-
-              <section class="game-phone__traffic-report">
-                <span class="game-phone__contact-avatar game-phone__contact-avatar--work">
-                  <i class="fa-solid fa-truck-pickup" aria-hidden="true" />
-                </span>
-                <span>
-                  <strong>Traffic blockage?</strong>
-                  <small>{{ trafficReport.message }}</small>
-                </span>
-                <button
-                  type="button"
-                  :disabled="['checking', 'waiting'].includes(trafficReport.status)"
-                  @click="$emit('report-traffic')"
-                >
-                  {{ trafficReport.status === 'checking' ? `CHECKING ${Math.ceil(trafficReport.remainingSeconds)}s` : 'REPORT TRAFFIC' }}
-                </button>
-              </section>
 
               <div class="game-phone__conversation-list">
                 <button v-if="government" class="game-phone__conversation" type="button" @click="openMessageContact('government')"><span class="game-phone__contact-avatar game-phone__contact-avatar--bank"><i class="fa-solid fa-landmark" aria-hidden="true" /></span><span class="game-phone__conversation-details"><strong>Government</strong><small>{{government.sunday?'Sunday election · cast your vote':government.messages.at(-1)?.text||'Elections, taxes and government wages'}}</small></span><span v-if="governmentUnread" class="game-phone__conversation-badge">{{governmentUnread}}</span></button>
@@ -3043,7 +3021,7 @@ function repayLoan() {
             </header>
 
             <button role="switch" :aria-checked="aiTrafficEnabled" class="game-phone__debug-action" @click="$emit('toggle-ai-traffic')"><i class="fa-solid fa-car"/><span><strong>AI traffic</strong><small>Remove or restore AI vehicles. Online players stay.</small></span><ToggleIcon :checked="aiTrafficEnabled" /></button>
-            <button role="switch" :aria-checked="godMode" class="game-phone__debug-action" @click="$emit('toggle-god-mode')"><i class="fa-solid fa-shield-halved"/><span><strong>God Mode</strong><small>Keep health and energy full.</small></span><ToggleIcon :checked="godMode" /></button>
+            <button role="switch" :aria-checked="godMode" class="game-phone__debug-action" @click="$emit('toggle-god-mode')"><i class="fa-solid fa-shield-halved"/><span><strong>God Mode</strong><small>Keep health and energy full; no automatic pause when you switch apps.</small></span><ToggleIcon :checked="godMode" /></button>
             <button role="switch" :aria-checked="debugVisible" aria-label="Debug view"
               type="button"
               :class="{ 'game-phone__debug-action--active': debugVisible }"
@@ -4736,46 +4714,6 @@ function repayLoan() {
   height: calc(100% - 43px);
   overflow-y: auto;
   padding: 12px;
-}
-
-.game-phone__traffic-report {
-  display: grid;
-  grid-template-columns: 42px 1fr;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0 12px;
-  padding: 10px;
-  border: 1px solid rgb(23 33 58 / 16%);
-  border-radius: 14px;
-  background: #fff7db;
-  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
-}
-
-.game-phone__traffic-report > span:nth-child(2) {
-  display: grid;
-  gap: 2px;
-}
-
-.game-phone__traffic-report small {
-  color: #44506a;
-  font-size: 9px;
-  line-height: 1.3;
-}
-
-.game-phone__traffic-report button {
-  grid-column: 1 / -1;
-  min-height: 38px;
-  border: 1px solid rgb(23 33 58 / 16%);
-  border-radius: 10px;
-  background: #ffd43b;
-  color: #14213d;
-  font: 900 11px Basic, sans-serif;
-  box-shadow: 0 2px 8px rgb(23 33 58 / 10%);
-}
-
-.game-phone__traffic-report button:disabled {
-  background: #d8dde8;
-  opacity: .8;
 }
 
 .game-phone__incoming-call {

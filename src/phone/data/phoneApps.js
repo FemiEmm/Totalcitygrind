@@ -1,4 +1,5 @@
 export const PHONE_APPS = Object.freeze([
+  Object.freeze({ id: "share", label: "Share", iconClass: "fa-solid fa-share-nodes", colour: "#168b92" }),
   Object.freeze({ id: "contacts", label: "Contacts", iconClass: "fa-solid fa-address-book", colour: "#168b92" }),
   Object.freeze({ id: "map", label: "Map", iconClass: "fa-solid fa-map-location-dot", colour: "#3f7de0" }),
   Object.freeze({ id: "messages", label: "Messages", iconClass: "fa-solid fa-comment-dots", colour: "#2ea44f" }),

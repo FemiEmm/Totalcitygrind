@@ -271,3 +271,10 @@ The governor residence uses a replacement transparent, fence-free building sprit
 ### Phone map and government parking — 2026-10-07
 
 The client and Backender government interaction now both use GOV parking at X48 Y−4. The phone map catalogue includes Sango Otta School, LASTMA Office, LAWMA Depot and Governor Residence, with navigation targeting their first marked parking bay. Governor house/government are search aliases. All Sango home parking addresses are also searchable. Entries derive coordinates from civic/residential parking definitions, so bay moves update navigation automatically. Sources: `src/motoEazi/data/motoEaziLocations.js`, `src/government/rules.js`, `services/backender/src/government/rules.js`.
+
+
+## Woodland approach terrain (2026-10-08)
+
+The tree-filled gaps beside Sango Otta now use grass. Only roads in `src/world/data/northernApproaches.js` use a mud surface: the west and east edge approaches, their right-angle turns, and their mainland links. Player vehicles and AI traffic travel at 50% normal road speed on those approach rectangles; normal speed resumes off them. Sango estate streets and the existing city roads retain their surfaces. Surface detection: `src/world/systems/roadSurface.js`.
+
+New woodland trees use circular collision areas at 90% of canopy diameter with `blocksVehicles: true`; player and AI vehicle collision checks use the existing obstacle spatial index.

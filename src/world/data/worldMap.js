@@ -614,14 +614,15 @@ for(let row=-69;row<0;row++)for(let column=0;column<64;column++){
  northernForestTiles.push({...tile,trees:positions.map(([x,y],i)=>({x:tile.x+x*GRID_SIZE,y:tile.y+y*GRID_SIZE,size:(.48+((seed>>>(i*4))%9)/100)*GRID_SIZE,rotation:((seed>>>(i*3))%4)*Math.PI/2}))});
 }
 
-// Only the new northern trees are solid. Compact individual trunks keep
-// canopy gaps passable and use the existing spatial collision index.
+// New northern trees block vehicles with round canopy-sized collision areas.
 export const northernTreeObstacles = northernForestTiles.flatMap((tile) =>
   tile.trees.map((tree, index) => {
-    const diameter = tree.size * 0.42;
+    const diameter = tree.size * 0.9;
     return {
       id: `northern-tree-${tile.x}-${tile.y}-${index}`,
       type: 'tree',
+      shape: 'circle',
+      blocksVehicles: true,
       x: tree.x - diameter / 2,
       y: tree.y - diameter / 2,
       width: diameter,

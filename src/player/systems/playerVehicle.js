@@ -779,6 +779,7 @@ function updatePosition(
 }
 
 export function updatePlayerVehicle({
+  speedMultiplier = 1,
   steeringBias = 0,
   vehicle,
   pressedKeys,
@@ -786,6 +787,12 @@ export function updatePlayerVehicle({
   config,
   canOccupy,
 }) {
+  if (speedMultiplier < 1) {
+    // Scale gear limits, not the speed every frame. Preserve normal steering and collisions.
+    config = { ...config, gears: config.gears.map(gear => ({ ...gear, maxSpeed: gear.maxSpeed * speedMultiplier, acceleration: gear.acceleration * speedMultiplier })) };
+    if ((vehicle.terrainSpeedMultiplier ?? 1) > speedMultiplier) vehicle.speed *= speedMultiplier / (vehicle.terrainSpeedMultiplier ?? 1);
+  }
+  vehicle.terrainSpeedMultiplier = speedMultiplier;
   vehicle.collisionResponseCooldown = Math.max(
     0,
     (vehicle.collisionResponseCooldown ?? 0) - deltaSeconds,

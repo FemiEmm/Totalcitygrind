@@ -460,7 +460,7 @@ function handleMenuKey(event) {
 
 function handleAppBackground() {
   if (onlineMode.value && accountReady) activeWorldReference.value?.saveGame?.();
-  if (screen.value === "playing") pauseGame();
+  if (screen.value === "playing" && !activeWorldReference.value?.isGodMode?.()) pauseGame();
 }
 function handlePageHide() {
   if (onlineMode.value && accountReady) emergencyOnlineSessionCheckpoint();
@@ -468,7 +468,7 @@ function handlePageHide() {
 }
 
 function handleVisibilityChange() {
-  if (document.hidden && screen.value === "playing") {
+  if (document.hidden && screen.value === "playing" && !activeWorldReference.value?.isGodMode?.()) {
     pausedByVisibility = true;
     pauseGame();
     return;

@@ -1,5 +1,5 @@
 import {GRID_SIZE,gridRect} from './mapConstants.js';
-const road=(id,x,y,w,h)=>({id:'northern-approach-'+id,...gridRect(x,y,w,h),type:'main',districtId:'northern-woodland'});
+const road=(id,x,y,w,h)=>({id:'northern-approach-'+id,...gridRect(x,y,w,h),type:'main',surface:'mud',districtId:'northern-woodland'});
 export const northernApproachRoads=[
  road('west-edge',2,-71,2,57),road('west-turn',2,-16,8,2),road('west-lower',8,-16,2,16),
  road('clinic-link',8,-2,11,2),road('estate-top-link',2,-69,24,2),
